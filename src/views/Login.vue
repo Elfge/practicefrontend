@@ -57,6 +57,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { ElMessage } from 'element-plus'
+import { login as userLogin } from '@/api/auth'
 
 export default {
   name: 'Login',
@@ -89,14 +90,17 @@ export default {
         if (valid) {
           loading.value = true
           try {
-            await new Promise(resolve => setTimeout(resolve, 1000))
-
-            const token = 'mock-jwt-token-' + Date.now()
-            const user = {
-              id: 1,
+            const { data } = await userLogin({
               username: loginForm.username,
-              email: loginForm.username + '@example.com',
-              role: 'user'
+              password: loginForm.password
+            })
+
+            const { token, userId, username, role } = data
+
+            const user = {
+              id: userId,
+              username: username,
+              role: role
             }
 
             store.dispatch('login', { token, user })

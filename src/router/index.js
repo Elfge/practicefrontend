@@ -35,6 +35,36 @@ const routes = [
         path: 'question-bank',
         name: 'QuestionBank',
         component: () => import('@/views/QuestionBank.vue')
+      },
+      {
+        path: 'practice',
+        name: 'Practice',
+        component: () => import('@/views/Practice.vue')
+      },
+      {
+        path: 'practice/:mode',
+        name: 'PracticeMode',
+        component: () => import('@/views/PracticeMode.vue')
+      },
+      {
+        path: 'mistakes',
+        name: 'Mistakes',
+        component: () => import('@/views/Mistakes.vue')
+      },
+      {
+        path: 'knowledge',
+        name: 'Knowledge',
+        component: () => import('@/views/Knowledge.vue')
+      },
+      {
+        path: 'exam',
+        name: 'Exam',
+        component: () => import('@/views/Exam.vue')
+      },
+      {
+        path: 'exam/:type/:id',
+        name: 'ExamDetail',
+        component: () => import('@/views/ExamDetail.vue')
       }
     ]
   }

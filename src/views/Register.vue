@@ -81,6 +81,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { register } from '@/api/auth'
 
 export default {
   name: 'Register',
@@ -94,7 +95,6 @@ export default {
       email: '',
       password: '',
       confirmPassword: '',
-      examDate: '',
       agreement: false
     })
 
@@ -153,9 +153,11 @@ export default {
 
           loading.value = true
           try {
-            await new Promise(resolve => setTimeout(resolve, 1000))
-
-            console.log('注册信息:', registerForm)
+            const { data } = await register({
+              username: registerForm.username,
+              email: registerForm.email,
+              password: registerForm.password
+            })
 
             ElMessage.success('注册成功，请登录')
             router.push('/login')

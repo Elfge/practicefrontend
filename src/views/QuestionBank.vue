@@ -85,7 +85,7 @@
       <el-card class="question-list-card">
         <template #header>
           <div class="list-header">
-            <span>题目列表（共 {{ filteredQuestions.length }} 题）</span>
+            <span>题目列表（共 {{ total }} 题）</span>
             <div class="view-modes">
               <el-radio-group v-model="viewMode">
                 <el-radio-button label="list">列表视图</el-radio-button>
@@ -140,7 +140,7 @@
               <el-button type="warning" size="small" @click="editQuestion(scope.row)">
                 编辑
               </el-button>
-              <el-button type="danger" size="small" @click="deleteQuestion(scope.row)">
+              <el-button type="danger" size="small" @click="deleteQuestionItem(scope.row)">
                 删除
               </el-button>
             </template>
@@ -188,7 +188,7 @@
             v-model:current-page="currentPage"
             v-model:page-size="pageSize"
             :page-sizes="[10, 20, 50, 100]"
-            :total="filteredQuestions.length"
+            :total="total"
             layout="total, sizes, prev, pager, next, jumper"
             @size-change="handleSizeChange"
             @current-change="handleCurrentChange"
@@ -318,6 +318,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { getQuestions, addQuestion, updateQuestion, deleteQuestion as deleteQuestionApi } from '@/api/practice'
 
 export default {
   name: 'QuestionBank',
@@ -370,52 +371,8 @@ export default {
       years.value.push(i.toString())
     }
 
-    // 模拟题目数据
-    const questions = ref([
-      {
-        id: 1,
-        content: '下列排序算法中，<strong>时间复杂度为O(nlogn)</strong>且稳定的算法是？',
-        type: 'single',
-        difficulty: 'medium',
-        subject: '数据结构',
-        chapter: '内部排序',
-        year: '2024',
-        options: ['快速排序', '堆排序', '归并排序', '希尔排序'],
-        correctAnswer: 2,
-        explanation: '归并排序的时间复杂度为O(nlogn)，且是稳定的排序算法。',
-        knowledgePoints: '排序算法,时间复杂度,稳定性'
-      },
-      {
-        id: 2,
-        content: '在操作系统中，<strong>进程调度</strong>的主要目标是？',
-        type: 'multiple',
-        difficulty: 'easy',
-        subject: '操作系统',
-        chapter: '进程管理',
-        year: '2024',
-        options: [
-          '提高CPU利用率',
-          '提高系统吞吐量',
-          '减少进程等待时间',
-          '降低内存使用'
-        ],
-        correctAnswer: [0, 1, 2],
-        explanation: '进程调度的目标包括提高CPU利用率、提高系统吞吐量、减少进程等待时间等。',
-        knowledgePoints: '进程调度,操作系统目标'
-      },
-      {
-        id: 3,
-        content: '某计算机的存储器按字节编址，字长为32位。若存储字地址为2000H，则该字所在存储单元的地址范围是____。',
-        type: 'fill',
-        difficulty: 'medium',
-        subject: '计算机组成原理',
-        chapter: '存储器系统',
-        year: '2023',
-        answer: '2000H-2003H',
-        explanation: '字长32位即4字节，按字节编址，所以一个字占用4个连续的存储单元。',
-        knowledgePoints: '存储器编址,字长,字节编址'
-      }
-    ])
+    const questions = ref([])
+    const total = ref(0)
 
     const filteredQuestions = computed(() => {
       return questions.value.filter(q => {
@@ -472,7 +429,29 @@ export default {
 
     const handleSearch = () => {
       currentPage.value = 1
-      store.dispatch('updateFilters', filters)
+      loadQuestions()
+    }
+
+    const loadQuestions = async () => {
+      try {
+        const params = {
+          current: currentPage.value,
+          size: pageSize.value,
+          subject: filters.subject,
+          difficulty: filters.difficulty?.toUpperCase(),
+          type: filters.questionType?.toUpperCase(),
+          year: filters.year
+        }
+
+        const { data } = await getQuestions(params)
+        questions.value = data.records.map(q => ({
+          ...q,
+          options: JSON.parse(q.options || '{}')
+        }))
+        total.value = data.total
+      } catch (error) {
+        ElMessage.error('加载题目失败')
+      }
     }
 
     const resetFilters = () => {
@@ -511,7 +490,7 @@ export default {
       }
     }
 
-    const deleteQuestion = async (question) => {
+    const deleteQuestionItem = async (question) => {
       try {
         await ElMessageBox.confirm(
           `确定要删除题目"${question.content.substring(0, 20)}..."吗？`,
@@ -523,11 +502,9 @@ export default {
           }
         )
 
-        const index = questions.value.findIndex(q => q.id === question.id)
-        if (index > -1) {
-          questions.value.splice(index, 1)
-          ElMessage.success('删除成功')
-        }
+        await deleteQuestionApi(question.id)
+        ElMessage.success('删除成功')
+        await loadQuestions()
       } catch {
         // 用户取消
       }
@@ -541,18 +518,72 @@ export default {
       questionForm.options.splice(index, 1)
     }
 
-    const saveQuestion = () => {
-      if (isEdit.value) {
-        ElMessage.success('题目更新成功')
-      } else {
-        questions.value.push({
-          ...questionForm,
-          id: Date.now()
-        })
-        ElMessage.success('题目添加成功')
+    const saveQuestion = async () => {
+      try {
+        const data = {
+          subject: mapSubject(questionForm.subject),
+          type: mapType(questionForm.type),
+          difficulty: mapDifficulty(questionForm.difficulty),
+          year: questionForm.year,
+          topic: questionForm.content,
+          options: JSON.stringify(
+            questionForm.type === 'single' || questionForm.type === 'multiple'
+              ? questionForm.options.map(o => o.content)
+              : {}
+          ),
+          answer: formatAnswer(),
+          analysis: questionForm.explanation,
+          tags: questionForm.knowledgePoints,
+          chapter: questionForm.chapter
+        }
+
+        if (isEdit.value) {
+          data.id = questionForm.id
+          await updateQuestion(data)
+          ElMessage.success('题目更新成功')
+          await loadQuestions()
+        } else {
+          await addQuestion(data)
+          ElMessage.success('题目添加成功')
+          await loadQuestions()
+        }
+
+        showAddDialog.value = false
+        resetQuestionForm()
+      } catch (error) {
+        ElMessage.error('保存失败，请重试')
       }
-      showAddDialog.value = false
-      resetQuestionForm()
+    }
+
+    const mapSubject = (subject) => {
+      const map = {
+        '数据结构': 'DS',
+        '计算机组成原理': 'CO',
+        '操作系统': 'OS',
+        '计算机网络': 'CN'
+      }
+      return map[subject] || subject
+    }
+
+    const mapType = (type) => {
+      return type?.toUpperCase()
+    }
+
+    const mapDifficulty = (difficulty) => {
+      return difficulty?.toUpperCase()
+    }
+
+    const formatAnswer = () => {
+      if (questionForm.type === 'single') {
+        return String.fromCharCode(65 + questionForm.correctAnswer)
+      } else if (questionForm.type === 'multiple') {
+        return questionForm.correctAnswer
+          .filter((_, i) => questionForm.options[i]?.isCorrect)
+          .map(i => String.fromCharCode(65 + i))
+          .join(',')
+      } else {
+        return questionForm.answer
+      }
     }
 
     const resetQuestionForm = () => {
@@ -585,13 +616,14 @@ export default {
     }
 
     onMounted(() => {
-      store.dispatch('updateFilters', filters)
+      loadQuestions()
     })
 
     return {
       viewMode,
       currentPage,
       pageSize,
+      total,
       showAddDialog,
       isEdit,
       filters,
@@ -612,7 +644,7 @@ export default {
       handleCurrentChange,
       viewQuestion,
       editQuestion,
-      deleteQuestion,
+      deleteQuestionItem,
       addOption,
       removeOption,
       saveQuestion,

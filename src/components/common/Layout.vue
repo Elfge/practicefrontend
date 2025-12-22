@@ -22,6 +22,21 @@
           <span>题库管理</span>
         </el-menu-item>
 
+        <el-sub-menu index="practice">
+          <template #title>
+            <el-icon><Reading /></el-icon>
+            <span>刷题练习</span>
+          </template>
+          <el-menu-item index="/practice">刷题模式</el-menu-item>
+          <el-menu-item index="/mistakes">错题本</el-menu-item>
+          <el-menu-item index="/knowledge">考点溯源</el-menu-item>
+        </el-sub-menu>
+
+        <el-menu-item index="/exam">
+          <el-icon><EditPen /></el-icon>
+          <span>模拟考试</span>
+        </el-menu-item>
+
         <el-menu-item index="/profile">
           <el-icon><User /></el-icon>
           <span>个人中心</span>
