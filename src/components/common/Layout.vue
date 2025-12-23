@@ -1,14 +1,16 @@
 <template>
   <el-container class="layout-container">
-    <el-aside width="200px" class="sidebar">
+    <el-header class="top-header">
       <div class="logo">
         <h3>408题库系统</h3>
       </div>
       <el-menu
         :default-active="activeMenu"
-        class="menu"
-        background-color="#304156"
-        text-color="#bfcbd9"
+        class="top-menu"
+        mode="horizontal"
+        :ellipsis="false"
+        background-color="transparent"
+        text-color="#606266"
         active-text-color="#409EFF"
         router
       >
@@ -42,39 +44,28 @@
           <span>个人中心</span>
         </el-menu-item>
       </el-menu>
-    </el-aside>
 
-    <el-container>
-      <el-header class="header">
-        <div class="header-left">
-          <el-breadcrumb separator="/">
-            <el-breadcrumb-item :to="{ path: '/home' }">首页</el-breadcrumb-item>
-            <el-breadcrumb-item v-if="breadcrumb">{{ breadcrumb }}</el-breadcrumb-item>
-          </el-breadcrumb>
-        </div>
+      <div class="header-right">
+        <el-dropdown @command="handleCommand">
+          <span class="user-info">
+            <el-icon><UserFilled /></el-icon>
+            {{ user?.username || '用户' }}
+            <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+              <el-dropdown-item command="settings">设置</el-dropdown-item>
+              <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
+    </el-header>
 
-        <div class="header-right">
-          <el-dropdown @command="handleCommand">
-            <span class="user-info">
-              <el-icon><UserFilled /></el-icon>
-              {{ user?.username || '用户' }}
-              <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-                <el-dropdown-item command="settings">设置</el-dropdown-item>
-                <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-      </el-header>
-
-      <el-main class="main-content">
-        <router-view />
-      </el-main>
-    </el-container>
+    <el-main class="main-content">
+      <router-view />
+    </el-main>
   </el-container>
 </template>
 
@@ -142,54 +133,141 @@ export default {
 <style scoped>
 .layout-container {
   height: 100vh;
+  flex-direction: column;
+  background-color: #f5f7fa;
 }
 
-.sidebar {
-  background-color: #304156;
-  box-shadow: 2px 0 6px rgba(0, 21, 41, 0.35);
+.top-header {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  padding: 0;
+  height: 64px;
+  border-bottom: 1px solid #e4e7ed;
+  position: relative;
+}
+
+.top-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #409EFF 0%, #67C23A 50%, #E6A23C 100%);
 }
 
 .logo {
-  height: 60px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #2b2f3a;
+  padding: 0 32px;
+  min-width: 200px;
+  background: linear-gradient(135deg, #409EFF 0%, #66b1ff 100%);
   color: #fff;
-  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.logo::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 200%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: rotate(30deg);
 }
 
 .logo h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  position: relative;
+  z-index: 1;
 }
 
-.menu {
-  border-right: none;
-}
-
-.header {
-  background-color: #fff;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+.top-menu {
+  flex: 1;
+  border-bottom: none;
+  background: transparent;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: center;
+}
+
+.top-menu :deep(.el-menu-item) {
+  color: #606266;
+  font-weight: 500;
+  font-size: 16px;
+  height: 64px;
+  line-height: 64px;
+  border-bottom: none !important;
+  transition: all 0.3s ease;
+  margin: 0 8px;
+  border-radius: 6px;
   padding: 0 20px;
+}
+
+.top-menu :deep(.el-menu-item:hover) {
+  background-color: rgba(64, 158, 255, 0.1) !important;
+  color: #409EFF;
+}
+
+.top-menu :deep(.el-menu-item.is-active) {
+  background-color: rgba(64, 158, 255, 0.15) !important;
+  color: #409EFF;
+  position: relative;
+}
+
+.top-menu :deep(.el-sub-menu__title) {
+  color: #606266;
+  font-weight: 500;
+  font-size: 16px;
+  height: 64px;
+  line-height: 64px;
+  border-bottom: none !important;
+  transition: all 0.3s ease;
+  margin: 0 8px;
+  border-radius: 6px;
+  padding: 0 20px;
+}
+
+.top-menu :deep(.el-sub-menu__title:hover) {
+  background-color: rgba(64, 158, 255, 0.1) !important;
+  color: #409EFF;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
 }
 
 .user-info {
   display: flex;
   align-items: center;
+  gap: 8px;
   cursor: pointer;
   color: #606266;
+  padding: 8px 16px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .user-info:hover {
+  background-color: rgba(64, 158, 255, 0.1);
   color: #409EFF;
 }
 
 .main-content {
-  background-color: #f0f2f5;
-  padding: 20px;
+  background-color: #f5f7fa;
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
 }
 </style>

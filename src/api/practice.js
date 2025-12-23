@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 获取题目列表（分页+筛选）
 export const getQuestions = (params) => {
   return request({
-    url: '/question/list',
+    url: '/api/question/list',
     method: 'get',
     params
   })
@@ -12,7 +12,7 @@ export const getQuestions = (params) => {
 // 根据ID获取题目
 export const getQuestion = (id) => {
   return request({
-    url: `/question/${id}`,
+    url: `/api/question/${id}`,
     method: 'get'
   })
 }
@@ -20,7 +20,7 @@ export const getQuestion = (id) => {
 // 获取随机题目
 export const getRandomQuestion = (params) => {
   return request({
-    url: '/question/random',
+    url: '/api/question/random',
     method: 'get',
     params
   })
@@ -29,7 +29,7 @@ export const getRandomQuestion = (params) => {
 // 获取章节列表
 export const getChapters = (subject) => {
   return request({
-    url: '/question/chapters',
+    url: '/api/question/chapters',
     method: 'get',
     params: { subject }
   })
@@ -38,7 +38,7 @@ export const getChapters = (subject) => {
 // 新增题目（管理员）
 export const addQuestion = (data) => {
   return request({
-    url: '/question',
+    url: '/api/question',
     method: 'post',
     data
   })
@@ -47,7 +47,7 @@ export const addQuestion = (data) => {
 // 更新题目（管理员）
 export const updateQuestion = (data) => {
   return request({
-    url: '/question',
+    url: '/api/question',
     method: 'put',
     data
   })
@@ -56,7 +56,16 @@ export const updateQuestion = (data) => {
 // 删除题目（管理员）
 export const deleteQuestion = (id) => {
   return request({
-    url: `/question/${id}`,
+    url: `/api/question/${id}`,
     method: 'delete'
+  })
+}
+
+// 获取知识点列表
+export const getKnowledgePoints = (subject) => {
+  return request({
+    url: '/api/knowledge/list',
+    method: 'get',
+    params: { subject }
   })
 }

@@ -4,39 +4,39 @@
       <el-card class="filter-card">
         <el-form :model="filters" :inline="true">
           <el-form-item label="科目">
-            <el-select v-model="filters.subject" placeholder="选择科目" clearable style="width: 150px">
-              <el-option label="数据结构" value="ds" />
-              <el-option label="计算机组成原理" value="cs" />
-              <el-option label="操作系统" value="os" />
-              <el-option label="计算机网络" value="cn" />
+            <el-select v-model="filters.subject" placeholder="选择科目" clearable style="width: 150px" @change="handleSubjectChange">
+              <el-option label="数据结构" value="DS" />
+              <el-option label="计算机组成原理" value="CO" />
+              <el-option label="操作系统" value="OS" />
+              <el-option label="计算机网络" value="CN" />
             </el-select>
           </el-form-item>
 
           <el-form-item label="章节">
-            <el-select v-model="filters.chapter" placeholder="选择章节" clearable style="width: 150px">
+            <el-select v-model="filters.chapter" placeholder="选择章节" clearable style="width: 200px" :loading="chapterLoading">
               <el-option
                 v-for="chapter in chapters"
-                :key="chapter.value"
-                :label="chapter.label"
-                :value="chapter.value"
+                :key="chapter"
+                :label="chapter"
+                :value="chapter"
               />
             </el-select>
           </el-form-item>
 
           <el-form-item label="题型">
-            <el-select v-model="filters.questionType" placeholder="选择题型" clearable style="width: 150px">
-              <el-option label="单选题" value="single" />
-              <el-option label="多选题" value="multiple" />
-              <el-option label="填空题" value="fill" />
-              <el-option label="综合题" value="comprehensive" />
+            <el-select v-model="filters.type" placeholder="选择题型" clearable style="width: 150px">
+              <el-option label="单选题" value="SINGLE" />
+              <el-option label="多选题" value="MULTIPLE" />
+              <el-option label="填空题" value="BLANK" />
+              <el-option label="综合题" value="COMPREHENSIVE" />
             </el-select>
           </el-form-item>
 
           <el-form-item label="难度">
             <el-select v-model="filters.difficulty" placeholder="选择难度" clearable style="width: 150px">
-              <el-option label="基础" value="easy" />
-              <el-option label="中等" value="medium" />
-              <el-option label="困难" value="hard" />
+              <el-option label="基础" value="EASY" />
+              <el-option label="中等" value="MEDIUM" />
+              <el-option label="困难" value="HARD" />
             </el-select>
           </el-form-item>
 
@@ -98,17 +98,18 @@
         <!-- 列表视图 -->
         <el-table
           v-if="viewMode === 'list'"
-          :data="paginatedQuestions"
+          :data="questions"
           style="width: 100%"
           @selection-change="handleSelectionChange"
+          v-loading="loading"
         >
           <el-table-column type="selection" width="55" />
 
           <el-table-column prop="id" label="ID" width="80" />
 
-          <el-table-column prop="content" label="题干" min-width="300">
+          <el-table-column prop="topic" label="题干" min-width="300">
             <template #default="scope">
-              <div class="question-content" v-html="scope.row.content"></div>
+              <div class="question-content" v-html="scope.row.topic"></div>
             </template>
           </el-table-column>
 
@@ -132,6 +133,8 @@
 
           <el-table-column prop="year" label="年份" width="100" />
 
+          <el-table-column prop="chapter" label="章节" width="150" />
+
           <el-table-column label="操作" width="200" fixed="right">
             <template #default="scope">
               <el-button type="primary" size="small" @click="viewQuestion(scope.row)">
@@ -148,9 +151,9 @@
         </el-table>
 
         <!-- 卡片视图 -->
-        <div v-else class="card-view">
+        <div v-else class="card-view" v-loading="loading">
           <el-row :gutter="20">
-            <el-col :span="8" v-for="question in paginatedQuestions" :key="question.id">
+            <el-col :span="8" v-for="question in questions" :key="question.id">
               <el-card class="question-card" shadow="hover">
                 <div class="card-header">
                   <el-tag :type="getTypeTagType(question.type)" size="small">
@@ -162,10 +165,11 @@
                 </div>
 
                 <div class="card-content">
-                  <div class="question-title" v-html="question.content"></div>
+                  <div class="question-title" v-html="question.topic"></div>
                   <div class="question-meta">
                     <span>{{ question.subject }}</span>
-                    <span>{{ question.year }}</span>
+                    <span>{{ question.year ? question.year + '年' : '非真题' }}</span>
+                    <span>{{ question.chapter }}</span>
                   </div>
                 </div>
 
@@ -208,10 +212,10 @@
             <el-col :span="12">
               <el-form-item label="科目">
                 <el-select v-model="questionForm.subject" style="width: 100%">
-                  <el-option label="数据结构" value="数据结构" />
-                  <el-option label="计算机组成原理" value="计算机组成原理" />
-                  <el-option label="操作系统" value="操作系统" />
-                  <el-option label="计算机网络" value="计算机网络" />
+                  <el-option label="数据结构" value="DS" />
+                  <el-option label="计算机组成原理" value="CO" />
+                  <el-option label="操作系统" value="OS" />
+                  <el-option label="计算机网络" value="CN" />
                 </el-select>
               </el-form-item>
             </el-col>
@@ -226,53 +230,48 @@
             <el-col :span="8">
               <el-form-item label="题型">
                 <el-select v-model="questionForm.type" style="width: 100%">
-                  <el-option label="单选题" value="single" />
-                  <el-option label="多选题" value="multiple" />
-                  <el-option label="填空题" value="fill" />
-                  <el-option label="综合题" value="comprehensive" />
+                  <el-option label="单选题" value="SINGLE" />
+                  <el-option label="多选题" value="MULTIPLE" />
+                  <el-option label="填空题" value="BLANK" />
+                  <el-option label="综合题" value="COMPREHENSIVE" />
                 </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="8">
               <el-form-item label="难度">
                 <el-select v-model="questionForm.difficulty" style="width: 100%">
-                  <el-option label="基础" value="easy" />
-                  <el-option label="中等" value="medium" />
-                  <el-option label="困难" value="hard" />
+                  <el-option label="基础" value="EASY" />
+                  <el-option label="中等" value="MEDIUM" />
+                  <el-option label="困难" value="HARD" />
                 </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="8">
               <el-form-item label="年份">
-                <el-input v-model="questionForm.year" placeholder="如：2024" />
+                <el-input-number v-model="questionForm.year" :min="1998" :max="2030" placeholder="如：2024" style="width: 100%" />
               </el-form-item>
             </el-col>
           </el-row>
 
           <el-form-item label="题干">
             <el-input
-              v-model="questionForm.content"
+              v-model="questionForm.topic"
               type="textarea"
               :rows="4"
               placeholder="请输入题干内容"
             />
           </el-form-item>
 
-          <el-form-item label="选项" v-if="questionForm.type === 'single' || questionForm.type === 'multiple'">
+          <el-form-item label="选项" v-if="questionForm.type === 'SINGLE' || questionForm.type === 'MULTIPLE'">
             <div class="options-container">
-              <div v-for="(option, index) in questionForm.options" :key="index" class="option-item">
+              <div v-for="(option, index) in questionForm.optionsList" :key="index" class="option-item">
+                <span class="option-label">{{ String.fromCharCode(65 + index) }}.</span>
                 <el-input
-                  v-model="option.content"
+                  v-model="questionForm.optionsList[index]"
                   :placeholder="`选项 ${String.fromCharCode(65 + index)}`"
-                  style="width: 300px; margin-right: 10px"
+                  style="flex: 1; margin-right: 10px"
                 />
-                <el-checkbox v-model="option.isCorrect" v-if="questionForm.type === 'multiple'">
-                  正确答案
-                </el-checkbox>
-                <el-radio v-model="questionForm.correctAnswer" :label="index" v-else>
-                  正确答案
-                </el-radio>
-                <el-button type="danger" size="small" @click="removeOption(index)" v-if="questionForm.options.length > 2">
+                <el-button type="danger" size="small" @click="removeOption(index)" v-if="questionForm.optionsList.length > 2">
                   删除
                 </el-button>
               </div>
@@ -280,18 +279,18 @@
             </div>
           </el-form-item>
 
-          <el-form-item label="答案" v-if="questionForm.type === 'fill' || questionForm.type === 'comprehensive'">
+          <el-form-item label="答案">
             <el-input
               v-model="questionForm.answer"
               type="textarea"
               :rows="2"
-              placeholder="请输入标准答案"
+              placeholder="请输入标准答案（如：A 或 A,B,C）"
             />
           </el-form-item>
 
           <el-form-item label="解析">
             <el-input
-              v-model="questionForm.explanation"
+              v-model="questionForm.analysis"
               type="textarea"
               :rows="4"
               placeholder="请输入题目解析"
@@ -300,7 +299,7 @@
 
           <el-form-item label="考点">
             <el-input
-              v-model="questionForm.knowledgePoints"
+              v-model="questionForm.tags"
               placeholder="请输入相关考点，多个考点用逗号分隔"
             />
           </el-form-item>
@@ -311,31 +310,90 @@
           <el-button type="primary" @click="saveQuestion">保存</el-button>
         </template>
       </el-dialog>
+
+      <!-- 查看题目详情对话框 -->
+      <el-dialog
+        v-model="showViewDialog"
+        title="题目详情"
+        width="70%"
+        top="5vh"
+      >
+        <div v-if="currentQuestion" class="question-detail">
+          <div class="detail-header">
+            <el-tag :type="getTypeTagType(currentQuestion.type)">
+              {{ getTypeLabel(currentQuestion.type) }}
+            </el-tag>
+            <el-tag :type="getDifficultyTagType(currentQuestion.difficulty)">
+              {{ getDifficultyLabel(currentQuestion.difficulty) }}
+            </el-tag>
+            <span class="meta-info">{{ currentQuestion.subject }}</span>
+            <span class="meta-info">{{ currentQuestion.year ? currentQuestion.year + '年' : '非真题' }}</span>
+            <span class="meta-info">{{ currentQuestion.chapter }}</span>
+          </div>
+
+          <el-divider />
+
+          <div class="detail-content">
+            <h3>题干</h3>
+            <div class="topic-content" v-html="currentQuestion.topic"></div>
+
+            <div v-if="currentQuestion.options" class="options-list">
+              <h4>选项</h4>
+              <div v-for="(option, index) in parsedOptions" :key="index" class="option-item-detail">
+                <span class="option-label-detail">{{ String.fromCharCode(65 + index) }}.</span>
+                <span>{{ option }}</span>
+              </div>
+            </div>
+
+            <div class="answer-section">
+              <h4>答案</h4>
+              <el-tag type="success">{{ currentQuestion.answer }}</el-tag>
+            </div>
+
+            <div class="analysis-section">
+              <h4>解析</h4>
+              <div v-html="currentQuestion.analysis"></div>
+            </div>
+
+            <div v-if="currentQuestion.tags" class="tags-section">
+              <h4>考点</h4>
+              <el-tag v-for="tag in currentQuestion.tags.split(',')" :key="tag" style="margin-right: 5px">
+                {{ tag }}
+              </el-tag>
+            </div>
+          </div>
+        </div>
+
+        <template #footer>
+          <el-button @click="showViewDialog = false">关闭</el-button>
+        </template>
+      </el-dialog>
     </div>
   </template>
 
 <script>
-import { ref, reactive, computed, onMounted } from 'vue'
-import { useStore } from 'vuex'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getQuestions, addQuestion, updateQuestion, deleteQuestion as deleteQuestionApi } from '@/api/practice'
+import { getQuestions, addQuestion, updateQuestion, deleteQuestion as deleteQuestionApi, getChapters } from '@/api/practice'
 
 export default {
   name: 'QuestionBank',
   setup() {
-    const store = useStore()
-
     const viewMode = ref('list')
     const currentPage = ref(1)
     const pageSize = ref(20)
     const showAddDialog = ref(false)
+    const showViewDialog = ref(false)
     const isEdit = ref(false)
     const selectedQuestions = ref([])
+    const loading = ref(false)
+    const chapterLoading = ref(false)
+    const currentQuestion = ref(null)
 
     const filters = reactive({
       subject: '',
       chapter: '',
-      questionType: '',
+      type: '',
       difficulty: '',
       year: ''
     })
@@ -344,87 +402,95 @@ export default {
       id: null,
       subject: '',
       chapter: '',
-      type: 'single',
-      difficulty: 'easy',
-      year: '',
-      content: '',
-      options: [
-        { content: '', isCorrect: false },
-        { content: '', isCorrect: false }
-      ],
-      correctAnswer: 0,
+      type: 'SINGLE',
+      difficulty: 'EASY',
+      year: null,
+      topic: '',
+      options: '',
+      optionsList: ['', ''],
       answer: '',
-      explanation: '',
-      knowledgePoints: ''
+      analysis: '',
+      tags: ''
     })
 
-    const chapters = ref([
-      { label: '第一章 绪论', value: 'chapter1' },
-      { label: '第二章 线性表', value: 'chapter2' },
-      { label: '第三章 栈和队列', value: 'chapter3' },
-      { label: '第四章 树与二叉树', value: 'chapter4' },
-      { label: '第五章 图', value: 'chapter5' }
-    ])
-
+    const chapters = ref([])
     const years = ref([])
-    for (let i = 2025; i >= 1998; i--) {
-      years.value.push(i.toString())
+    for (let i = new Date().getFullYear(); i >= 1998; i--) {
+      years.value.push(i)
     }
 
     const questions = ref([])
     const total = ref(0)
 
-    const filteredQuestions = computed(() => {
-      return questions.value.filter(q => {
-        return (!filters.subject || q.subject.includes(filters.subject)) &&
-               (!filters.questionType || q.type === filters.questionType) &&
-               (!filters.difficulty || q.difficulty === filters.difficulty) &&
-               (!filters.year || q.year === filters.year)
-      })
-    })
-
-    const paginatedQuestions = computed(() => {
-      const start = (currentPage.value - 1) * pageSize.value
-      const end = start + pageSize.value
-      return filteredQuestions.value.slice(start, end)
+    const parsedOptions = computed(() => {
+      if (!currentQuestion.value?.options) return []
+      try {
+        const options = typeof currentQuestion.value.options === 'string'
+          ? JSON.parse(currentQuestion.value.options)
+          : currentQuestion.value.options
+        return Object.values(options)
+      } catch {
+        return []
+      }
     })
 
     const getTypeLabel = (type) => {
       const typeMap = {
-        single: '单选',
-        multiple: '多选',
-        fill: '填空',
-        comprehensive: '综合'
+        SINGLE: '单选',
+        MULTIPLE: '多选',
+        BLANK: '填空',
+        COMPREHENSIVE: '综合'
       }
       return typeMap[type] || type
     }
 
     const getTypeTagType = (type) => {
       const typeMap = {
-        single: 'primary',
-        multiple: 'success',
-        fill: 'warning',
-        comprehensive: 'danger'
+        SINGLE: 'primary',
+        MULTIPLE: 'success',
+        BLANK: 'warning',
+        COMPREHENSIVE: 'danger'
       }
       return typeMap[type] || ''
     }
 
     const getDifficultyLabel = (difficulty) => {
       const difficultyMap = {
-        easy: '基础',
-        medium: '中等',
-        hard: '困难'
+        EASY: '基础',
+        MEDIUM: '中等',
+        HARD: '困难'
       }
       return difficultyMap[difficulty] || difficulty
     }
 
     const getDifficultyTagType = (difficulty) => {
       const difficultyMap = {
-        easy: 'success',
-        medium: 'warning',
-        hard: 'danger'
+        EASY: 'success',
+        MEDIUM: 'warning',
+        HARD: 'danger'
       }
       return difficultyMap[difficulty] || ''
+    }
+
+    const handleSubjectChange = async () => {
+      filters.chapter = ''
+      if (filters.subject) {
+        await loadChapters()
+      } else {
+        chapters.value = []
+      }
+    }
+
+    const loadChapters = async () => {
+      chapterLoading.value = true
+      try {
+        const { data } = await getChapters(filters.subject)
+        chapters.value = data || []
+      } catch (error) {
+        ElMessage.error('加载章节失败')
+      } finally {
+        chapterLoading.value = false
+      }
     }
 
     const handleSearch = () => {
@@ -433,24 +499,25 @@ export default {
     }
 
     const loadQuestions = async () => {
+      loading.value = true
       try {
         const params = {
           current: currentPage.value,
-          size: pageSize.value,
-          subject: filters.subject,
-          difficulty: filters.difficulty?.toUpperCase(),
-          type: filters.questionType?.toUpperCase(),
-          year: filters.year
+          size: pageSize.value
         }
 
+        if (filters.subject) params.subject = filters.subject
+        if (filters.difficulty) params.difficulty = filters.difficulty
+        if (filters.type) params.type = filters.type
+        if (filters.year) params.year = filters.year
+
         const { data } = await getQuestions(params)
-        questions.value = data.records.map(q => ({
-          ...q,
-          options: JSON.parse(q.options || '{}')
-        }))
-        total.value = data.total
+        questions.value = data.records || []
+        total.value = data.total || 0
       } catch (error) {
         ElMessage.error('加载题目失败')
+      } finally {
+        loading.value = false
       }
     }
 
@@ -458,7 +525,9 @@ export default {
       Object.keys(filters).forEach(key => {
         filters[key] = ''
       })
+      chapters.value = []
       currentPage.value = 1
+      loadQuestions()
     }
 
     const handleSelectionChange = (selection) => {
@@ -468,32 +537,52 @@ export default {
     const handleSizeChange = (val) => {
       pageSize.value = val
       currentPage.value = 1
+      loadQuestions()
     }
 
     const handleCurrentChange = (val) => {
       currentPage.value = val
+      loadQuestions()
     }
 
     const viewQuestion = (question) => {
-      ElMessage.info(`查看题目：${question.id}`)
+      currentQuestion.value = question
+      showViewDialog.value = true
     }
 
     const editQuestion = (question) => {
       isEdit.value = true
       showAddDialog.value = true
-      Object.assign(questionForm, question)
-      if (question.type === 'single' || question.type === 'multiple') {
-        questionForm.options = question.options.map((opt, index) => ({
-          content: opt,
-          isCorrect: question.correctAnswer.includes(index)
-        }))
+
+      Object.assign(questionForm, {
+        id: question.id,
+        subject: question.subject,
+        chapter: question.chapter,
+        type: question.type,
+        difficulty: question.difficulty,
+        year: question.year,
+        topic: question.topic,
+        answer: question.answer,
+        analysis: question.analysis,
+        tags: question.tags
+      })
+
+      if (question.options) {
+        try {
+          const options = typeof question.options === 'string'
+            ? JSON.parse(question.options)
+            : question.options
+          questionForm.optionsList = Object.values(options)
+        } catch {
+          questionForm.optionsList = ['', '']
+        }
       }
     }
 
     const deleteQuestionItem = async (question) => {
       try {
         await ElMessageBox.confirm(
-          `确定要删除题目"${question.content.substring(0, 20)}..."吗？`,
+          `确定要删除题目"${question.topic?.substring(0, 20)}..."吗？`,
           '提示',
           {
             confirmButtonText: '确定',
@@ -511,29 +600,30 @@ export default {
     }
 
     const addOption = () => {
-      questionForm.options.push({ content: '', isCorrect: false })
+      questionForm.optionsList.push('')
     }
 
     const removeOption = (index) => {
-      questionForm.options.splice(index, 1)
+      questionForm.optionsList.splice(index, 1)
     }
 
     const saveQuestion = async () => {
       try {
+        const optionsObj = {}
+        questionForm.optionsList.forEach((opt, index) => {
+          optionsObj[String.fromCharCode(65 + index)] = opt
+        })
+
         const data = {
-          subject: mapSubject(questionForm.subject),
-          type: mapType(questionForm.type),
-          difficulty: mapDifficulty(questionForm.difficulty),
-          year: questionForm.year,
-          topic: questionForm.content,
-          options: JSON.stringify(
-            questionForm.type === 'single' || questionForm.type === 'multiple'
-              ? questionForm.options.map(o => o.content)
-              : {}
-          ),
-          answer: formatAnswer(),
-          analysis: questionForm.explanation,
-          tags: questionForm.knowledgePoints,
+          subject: questionForm.subject,
+          type: questionForm.type,
+          difficulty: questionForm.difficulty,
+          year: questionForm.year || 0,
+          topic: questionForm.topic,
+          options: JSON.stringify(optionsObj),
+          answer: questionForm.answer,
+          analysis: questionForm.analysis,
+          tags: questionForm.tags,
           chapter: questionForm.chapter
         }
 
@@ -541,48 +631,16 @@ export default {
           data.id = questionForm.id
           await updateQuestion(data)
           ElMessage.success('题目更新成功')
-          await loadQuestions()
         } else {
           await addQuestion(data)
           ElMessage.success('题目添加成功')
-          await loadQuestions()
         }
 
         showAddDialog.value = false
         resetQuestionForm()
+        await loadQuestions()
       } catch (error) {
         ElMessage.error('保存失败，请重试')
-      }
-    }
-
-    const mapSubject = (subject) => {
-      const map = {
-        '数据结构': 'DS',
-        '计算机组成原理': 'CO',
-        '操作系统': 'OS',
-        '计算机网络': 'CN'
-      }
-      return map[subject] || subject
-    }
-
-    const mapType = (type) => {
-      return type?.toUpperCase()
-    }
-
-    const mapDifficulty = (difficulty) => {
-      return difficulty?.toUpperCase()
-    }
-
-    const formatAnswer = () => {
-      if (questionForm.type === 'single') {
-        return String.fromCharCode(65 + questionForm.correctAnswer)
-      } else if (questionForm.type === 'multiple') {
-        return questionForm.correctAnswer
-          .filter((_, i) => questionForm.options[i]?.isCorrect)
-          .map(i => String.fromCharCode(65 + i))
-          .join(',')
-      } else {
-        return questionForm.answer
       }
     }
 
@@ -591,18 +649,15 @@ export default {
         id: null,
         subject: '',
         chapter: '',
-        type: 'single',
-        difficulty: 'easy',
-        year: '',
-        content: '',
-        options: [
-          { content: '', isCorrect: false },
-          { content: '', isCorrect: false }
-        ],
-        correctAnswer: 0,
+        type: 'SINGLE',
+        difficulty: 'EASY',
+        year: null,
+        topic: '',
+        options: '',
+        optionsList: ['', ''],
         answer: '',
-        explanation: '',
-        knowledgePoints: ''
+        analysis: '',
+        tags: ''
       })
       isEdit.value = false
     }
@@ -615,6 +670,12 @@ export default {
       ElMessage.info('导出功能开发中...')
     }
 
+    watch(() => showAddDialog.value, (newVal) => {
+      if (!newVal) {
+        resetQuestionForm()
+      }
+    })
+
     onMounted(() => {
       loadQuestions()
     })
@@ -625,18 +686,22 @@ export default {
       pageSize,
       total,
       showAddDialog,
+      showViewDialog,
       isEdit,
       filters,
       questionForm,
       chapters,
       years,
       questions,
-      filteredQuestions,
-      paginatedQuestions,
+      loading,
+      chapterLoading,
+      currentQuestion,
+      parsedOptions,
       getTypeLabel,
       getTypeTagType,
       getDifficultyLabel,
       getDifficultyTagType,
+      handleSubjectChange,
       handleSearch,
       resetFilters,
       handleSelectionChange,
@@ -724,6 +789,10 @@ export default {
   font-size: 12px;
 }
 
+.question-meta span {
+  margin-right: 10px;
+}
+
 .card-actions {
   display: flex;
   justify-content: space-between;
@@ -743,5 +812,82 @@ export default {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
+}
+
+.option-label {
+  font-weight: bold;
+  margin-right: 8px;
+  min-width: 20px;
+}
+
+/* 题目详情对话框样式 */
+.question-detail {
+  padding: 10px;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.detail-header .meta-info {
+  color: #606266;
+  font-size: 14px;
+}
+
+.detail-content h3,
+.detail-content h4 {
+  color: #303133;
+  margin-top: 15px;
+  margin-bottom: 10px;
+}
+
+.topic-content {
+  color: #303133;
+  font-size: 15px;
+  line-height: 1.8;
+  padding: 10px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.options-list {
+  margin-top: 15px;
+}
+
+.option-item-detail {
+  padding: 8px 15px;
+  margin-bottom: 8px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.option-label-detail {
+  font-weight: bold;
+  margin-right: 10px;
+  min-width: 25px;
+}
+
+.answer-section,
+.analysis-section,
+.tags-section {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f0f9ff;
+  border-radius: 4px;
+  border-left: 4px solid #409eff;
+}
+
+.analysis-section {
+  background-color: #fef9f0;
+  border-left-color: #e6a23c;
+}
+
+.tags-section {
+  background-color: #f0f9ff;
+  border-left-color: #67c23a;
 }
 </style>

@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 收藏题目
 export const collectQuestion = (questionId) => {
   return request({
-    url: `/collection/${questionId}`,
+    url: `/api/collection/${questionId}`,
     method: 'post'
   })
 }
@@ -11,7 +11,7 @@ export const collectQuestion = (questionId) => {
 // 取消收藏
 export const uncollectQuestion = (questionId) => {
   return request({
-    url: `/collection/${questionId}`,
+    url: `/api/collection/${questionId}`,
     method: 'delete'
   })
 }
@@ -19,7 +19,7 @@ export const uncollectQuestion = (questionId) => {
 // 检查是否已收藏
 export const checkCollected = (questionId) => {
   return request({
-    url: `/collection/${questionId}`,
+    url: `/api/collection/${questionId}`,
     method: 'get'
   })
 }

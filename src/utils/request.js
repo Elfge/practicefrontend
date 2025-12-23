@@ -4,7 +4,7 @@ import router from '@/router'
 
 // 创建axios实例
 const request = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: '',  // API路径已包含/api前缀，开发环境通过vue.config.js代理访问
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -32,12 +32,12 @@ request.interceptors.response.use(
   response => {
     const { code, message, data } = response.data
 
-    // 如果code不是200，说明有错误
+    // code为200表示成功
     if (code !== 200) {
       ElMessage.error(message || '请求失败')
 
       // 401: 未授权，跳转到登录页
-      if (code === 401) {
+      if (response.status === 401) {
         localStorage.removeItem('token')
         router.push('/login')
       }

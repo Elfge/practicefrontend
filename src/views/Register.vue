@@ -153,7 +153,7 @@ export default {
 
           loading.value = true
           try {
-            const { data } = await register({
+            await register({
               username: registerForm.username,
               email: registerForm.email,
               password: registerForm.password

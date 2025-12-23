@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 用户注册
 export const register = (data) => {
   return request({
-    url: '/auth/register',
+    url: '/api/auth/register',
     method: 'post',
     data
   })
@@ -12,7 +12,7 @@ export const register = (data) => {
 // 用户登录
 export const login = (data) => {
   return request({
-    url: '/auth/login',
+    url: '/api/auth/login',
     method: 'post',
     data
   })

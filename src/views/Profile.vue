@@ -91,7 +91,20 @@
             <el-divider />
 
             <div class="chart-container">
-              <v-chart class="chart" :option="progressChart" />
+              <div v-if="progressChart.series[0].data.some(v => v > 0)" class="simple-chart">
+                <div v-for="(subject, index) in ['数据结构', '计算机组成原理', '操作系统', '计算机网络']" :key="subject" class="chart-item">
+                  <div class="chart-label">{{ subject }}</div>
+                  <div class="chart-bar">
+                    <div class="bar-completed" :style="{ width: (progressChart.series[0].data[index] / Math.max(progressChart.series[0].data[index] + progressChart.series[1].data[index], 1) * 100) + '%' }"></div>
+                    <div class="bar-total" :style="{ width: (progressChart.series[1].data[index] / Math.max(progressChart.series[0].data[index] + progressChart.series[1].data[index], 1) * 100) + '%' }"></div>
+                  </div>
+                  <div class="chart-values">
+                    <span class="completed">{{ progressChart.series[0].data[index] }}</span>
+                    <span class="total">/{{ progressChart.series[0].data[index] + progressChart.series[1].data[index] }}</span>
+                  </div>
+                </div>
+              </div>
+              <el-empty v-else description="暂无学习数据，开始练习吧！" />
             </div>
           </el-card>
 
@@ -164,36 +177,17 @@
   </template>
 
 <script>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { use } from 'echarts/core'
-import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart } from 'echarts/charts'
-import {
-  TitleComponent,
-  TooltipComponent,
-  LegendComponent,
-  GridComponent
-} from 'echarts/components'
-import VChart from 'vue-echarts'
-
-use([
-  CanvasRenderer,
-  BarChart,
-  TitleComponent,
-  TooltipComponent,
-  LegendComponent,
-  GridComponent
-])
+import { getUserStatistics, getSubjectStatistics, getWeakChapters } from '@/api/statistics'
 
 export default {
   name: 'Profile',
-  components: {
-    VChart
-  },
   setup() {
     const store = useStore()
+    const router = useRouter()
 
     const userInfo = computed(() => store.state.user || {
       username: '测试用户',
@@ -209,20 +203,14 @@ export default {
     })
 
     const stats = ref({
-      totalQuestions: 1234,
-      accuracy: 78,
-      todayTime: 2.5,
-      weekTime: 15,
-      totalTime: 120
+      totalQuestions: 0,
+      accuracy: 0,
+      todayTime: 0,
+      weekTime: 0,
+      totalTime: 0
     })
 
-    const weaknessData = ref([
-      { chapter: '树与二叉树', subject: '数据结构', errorRate: 0.45, questionCount: 50 },
-      { chapter: '进程管理', subject: '操作系统', errorRate: 0.38, questionCount: 40 },
-      { chapter: '内存管理', subject: '操作系统', errorRate: 0.35, questionCount: 35 },
-      { chapter: '存储器系统', subject: '计算机组成原理', errorRate: 0.32, questionCount: 45 },
-      { chapter: '路由算法', subject: '计算机网络', errorRate: 0.28, questionCount: 30 }
-    ])
+    const weaknessData = ref([])
 
     const progressChart = ref({
       title: {
@@ -257,7 +245,7 @@ export default {
         {
           name: '已完成',
           type: 'bar',
-          data: [120, 150, 180, 100],
+          data: [0, 0, 0, 0],
           itemStyle: {
             color: '#67C23A'
           }
@@ -265,12 +253,72 @@ export default {
         {
           name: '未完成',
           type: 'bar',
-          data: [80, 100, 120, 50],
+          data: [0, 0, 0, 0],
           itemStyle: {
             color: '#E6A23C'
           }
         }
       ]
+    })
+
+    const loadStatistics = async () => {
+      try {
+        const { data } = await getUserStatistics()
+        if (data) {
+          stats.value.totalQuestions = data.totalQuestions || 0
+          stats.value.accuracy = Math.round(data.accuracy * 100) || 0
+          stats.value.todayTime = data.todayTime || 0
+          stats.value.weekTime = data.weekTime || 0
+          stats.value.totalTime = data.totalTime || 0
+        }
+      } catch (error) {
+        console.error('加载统计数据失败', error)
+      }
+    }
+
+    const loadWeakChapters = async () => {
+      try {
+        const { data } = await getWeakChapters()
+        if (data && Array.isArray(data)) {
+          weaknessData.value = data.map(item => ({
+            chapter: item.chapter || '未知章节',
+            subject: item.subject || '未知科目',
+            errorRate: item.errorRate || 0,
+            questionCount: item.questionCount || 0
+          }))
+        }
+      } catch (error) {
+        console.error('加载薄弱章节失败', error)
+      }
+    }
+
+    const loadSubjectStatistics = async () => {
+      try {
+        const { data } = await getSubjectStatistics()
+        if (data && Array.isArray(data)) {
+          const completed = [0, 0, 0, 0]
+          const total = [0, 0, 0, 0]
+
+          data.forEach(item => {
+            const index = ['DS', 'CO', 'OS', 'CN'].indexOf(item.subject)
+            if (index !== -1) {
+              completed[index] = item.completed || 0
+              total[index] = item.total || 0
+            }
+          })
+
+          progressChart.value.series[0].data = completed
+          progressChart.value.series[1].data = total.map((t, i) => t - completed[i])
+        }
+      } catch (error) {
+        console.error('加载科目统计失败', error)
+      }
+    }
+
+    onMounted(() => {
+      loadStatistics()
+      loadWeakChapters()
+      loadSubjectStatistics()
     })
 
     const editProfile = () => {
@@ -282,7 +330,7 @@ export default {
     }
 
     const practiceWeakness = (chapter) => {
-      ElMessage.info(`开始针对性练习：${chapter.subject} - ${chapter.chapter}`)
+      router.push(`/practice?mode=special&subject=${chapter.subject}&chapter=${chapter.chapter}`)
     }
 
     return {
@@ -380,9 +428,59 @@ export default {
   margin-top: 20px;
 }
 
-.chart {
+.simple-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.chart-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.chart-label {
+  width: 100px;
+  font-size: 14px;
+  color: #606266;
+  text-align: right;
+}
+
+.chart-bar {
+  flex: 1;
+  height: 24px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+}
+
+.bar-completed {
   height: 100%;
-  width: 100%;
+  background: #67C23A;
+  min-width: 2px;
+}
+
+.bar-total {
+  height: 100%;
+  background: #E6A23C;
+  min-width: 2px;
+}
+
+.chart-values {
+  width: 80px;
+  text-align: left;
+  font-size: 14px;
+}
+
+.chart-values .completed {
+  color: #67C23A;
+  font-weight: bold;
+}
+
+.chart-values .total {
+  color: #909399;
 }
 
 .time-card .time-stat {

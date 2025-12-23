@@ -19,7 +19,7 @@
           :stroke-width="8"
           :color="getTimerColor"
         >
-          <template #default="{ percentage }">
+          <template #default>
             <div class="timer-content">
               <div class="time-display">{{ formatTime(remainingTime) }}</div>
               <div class="time-label">剩余时间</div>
@@ -282,7 +282,6 @@ export default {
     const showQuestionList = ref(false)
     const showSubmitConfirm = ref(false)
     const remainingTime = ref(10800) // 3小时
-    const examStartTime = ref(Date.now())
 
     const examInfo = ref({
       name: examType === 'past' ? '2024年408真题' : '自定义模拟卷',
@@ -349,7 +348,7 @@ export default {
         const res = await getQuestions({
           count: examInfo.value.totalQuestions
         })
-        questions.value = res.data.list.map((q, index) => ({
+        questions.value = res.data.list.map((q) => ({
           ...q,
           score: getQuestionScore(q.type),
           marked: false

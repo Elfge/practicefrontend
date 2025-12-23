@@ -70,8 +70,8 @@
               <el-table-column prop="concept" label="概念" />
               <el-table-column prop="description" label="描述" />
               <el-table-column label="操作">
-                <template #default="scope">
-                  <el-button type="text" @click="compareConcepts(group.points)">
+                <template #default>
+                  <el-button type="text" @click="compareConcepts(group)">
                     对比
                   </el-button>
                 </template>
@@ -270,7 +270,7 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getKnowledgePoints } from '@/api/practice'
@@ -286,7 +286,6 @@ import {
 import VChart from 'vue-echarts'
 import {
   QuestionFilled,
-  Search,
   Share
 } from '@element-plus/icons-vue'
 
@@ -305,7 +304,6 @@ export default {
   components: {
     VChart,
     QuestionFilled,
-    Search,
     Share
   },
   setup() {
@@ -501,8 +499,8 @@ export default {
       router.push(`/practice/special?knowledge=${encodeURIComponent(point.name)}`)
     }
 
-    const compareConcepts = (points) => {
-      ElMessage.info('概念对比功能开发中...')
+    const compareConcepts = (group) => {
+      ElMessage.info(`概念对比功能开发中...：${group.name}`)
     }
 
     const addToNotes = () => {

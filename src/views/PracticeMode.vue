@@ -43,7 +43,7 @@
         :stroke-width="8"
         :color="getTimerColor"
       >
-        <template #default="{ percentage }">
+        <template #default>
           <div class="timer-content">
             <div class="time-display">{{ formatTime(examTime) }}</div>
             <div class="time-label">剩余时间</div>
@@ -87,7 +87,7 @@
             <div class="question-stem" v-html="currentQuestion.content"></div>
 
             <!-- 选择题选项 -->
-            <div v-if="currentQuestion.type === 'single'" class="options-container">
+            <div v-if="currentQuestion.type === 'SINGLE'" class="options-container">
               <el-radio-group v-model="userAnswer" :disabled="showAnalysis">
                 <div v-for="(option, index) in currentQuestion.options" :key="index" class="option-item">
                   <el-radio :label="index">
@@ -98,7 +98,7 @@
               </el-radio-group>
             </div>
 
-            <div v-else-if="currentQuestion.type === 'multiple'" class="options-container">
+            <div v-else-if="currentQuestion.type === 'MULTIPLE'" class="options-container">
               <el-checkbox-group v-model="userAnswer" :disabled="showAnalysis">
                 <div v-for="(option, index) in currentQuestion.options" :key="index" class="option-item">
                   <el-checkbox :label="index">
@@ -110,7 +110,7 @@
             </div>
 
             <!-- 填空题 -->
-            <div v-else-if="currentQuestion.type === 'fill'" class="fill-container">
+            <div v-else-if="currentQuestion.type === 'BLANK'" class="fill-container">
               <el-input
                 v-model="userAnswer"
                 type="textarea"
@@ -121,7 +121,7 @@
             </div>
 
             <!-- 综合题 -->
-            <div v-else-if="currentQuestion.type === 'comprehensive'" class="comprehensive-container">
+            <div v-else-if="currentQuestion.type === 'COMPREHENSIVE'" class="comprehensive-container">
               <el-input
                 v-model="userAnswer"
                 type="textarea"
@@ -176,16 +176,16 @@
           <div class="analysis-content">
             <div class="answer-section">
               <h4>标准答案：</h4>
-              <div v-if="currentQuestion.type === 'single'">
+              <div v-if="currentQuestion.type === 'SINGLE'">
                 {{ String.fromCharCode(65 + currentQuestion.correctAnswer) }}
               </div>
-              <div v-else-if="currentQuestion.type === 'multiple'">
+              <div v-else-if="currentQuestion.type === 'MULTIPLE'">
                 {{ currentQuestion.correctAnswer.map(i => String.fromCharCode(65 + i)).join(', ') }}
               </div>
-              <div v-else-if="currentQuestion.type === 'fill'">
+              <div v-else-if="currentQuestion.type === 'BLANK'">
                 {{ currentQuestion.answer }}
               </div>
-              <div v-else-if="currentQuestion.type === 'comprehensive'" class="ref-answer">
+              <div v-else-if="currentQuestion.type === 'COMPREHENSIVE'" class="ref-answer">
                 <pre>{{ currentQuestion.answer }}</pre>
               </div>
             </div>
@@ -209,7 +209,7 @@
             </div>
 
             <!-- 综合题评分 -->
-            <div v-if="currentQuestion.type === 'comprehensive'" class="score-section">
+            <div v-if="currentQuestion.type === 'COMPREHENSIVE'" class="score-section">
               <h4>主观题评分：</h4>
               <el-rate
                 v-model="subjectiveScore"
@@ -316,7 +316,8 @@ import {
   Star,
   Check
 } from '@element-plus/icons-vue'
-import { getQuestions, submitAnswer } from '@/api/practice'
+import { getQuestions, getRandomQuestion } from '@/api/practice'
+import { submitAnswer as submitAnswerApi } from '@/api/answer'
 
 export default {
   name: 'PracticeMode',
@@ -354,10 +355,10 @@ export default {
 
     const hasAnswer = computed(() => {
       if (!currentQuestion.value) return false
-      if (currentQuestion.value.type === 'single') {
+      if (currentQuestion.value.type === 'SINGLE') {
         return userAnswer.value !== null && userAnswer.value !== ''
       }
-      if (currentQuestion.value.type === 'multiple') {
+      if (currentQuestion.value.type === 'MULTIPLE') {
         return userAnswer.value && userAnswer.value.length > 0
       }
       return userAnswer.value !== null && userAnswer.value !== ''
@@ -408,30 +409,109 @@ export default {
 
     const loadQuestions = async () => {
       try {
-        const filters = {
-          subject: route.query.subject || '',
-          difficulty: route.query.difficulty || '',
-          count: route.query.count || 20
+        const count = parseInt(route.query.count) || 20
+        const subject = route.query.subject || undefined
+        const difficulty = route.query.difficulty || undefined
+        const chapter = route.query.chapter || undefined
+
+        if (mode.value === 'single') {
+          // 单题模式：逐个获取随机题目
+          for (let i = 0; i < count; i++) {
+            try {
+              const params = {}
+              if (subject) params.subject = subject
+              if (difficulty) params.difficulty = difficulty
+              if (chapter) params.chapter = chapter
+
+              const res = await getRandomQuestion(params)
+              if (res.data) {
+                questions.value.push(parseQuestionData(res.data))
+                questionStatus.push({
+                  answered: false,
+                  isCorrect: false
+                })
+              }
+            } catch (e) {
+              // 单个题目加载失败，继续
+            }
+          }
+        } else if (mode.value === 'batch' || mode.value === 'special') {
+          // 套题模式和专项模式：批量获取
+          const params = {
+            current: 1,
+            size: count
+          }
+          if (subject) params.subject = subject
+          if (difficulty) params.difficulty = difficulty
+          if (chapter) params.chapter = chapter
+
+          const res = await getQuestions(params)
+          if (res.data && res.data.records) {
+            questions.value = res.data.records.map(q => parseQuestionData(q))
+            questions.value.forEach(() => {
+              questionStatus.push({
+                answered: false,
+                isCorrect: false
+              })
+            })
+          }
         }
-
-        if (mode.value === 'special') {
-          // 专项模式加载特定章节题目
-          filters.chapter = route.query.chapter
-        }
-
-        const res = await getQuestions(filters)
-        questions.value = res.data.list
-
-        // 初始化题目状态
-        questions.value.forEach(() => {
-          questionStatus.push({
-            answered: false,
-            isCorrect: false
-          })
-        })
       } catch (error) {
         ElMessage.error('加载题目失败')
       }
+    }
+
+    const parseQuestionData = (q) => {
+      // 解析题目数据
+      const question = {
+        id: q.id,
+        subject: q.subject,
+        type: q.type,
+        difficulty: q.difficulty,
+        chapter: q.chapter,
+        year: q.year,
+        topic: q.topic,
+        answer: q.answer,
+        analysis: q.analysis,
+        tags: q.tags,
+        isMarked: false,
+        isCollected: false
+      }
+
+      // 解析选项
+      if (q.type === 'SINGLE' || q.type === 'MULTIPLE') {
+        try {
+          const options = typeof q.options === 'string'
+            ? JSON.parse(q.options)
+            : q.options
+          question.options = Object.values(options)
+        } catch {
+          question.options = []
+        }
+
+        // 解析正确答案
+        if (q.type === 'SINGLE') {
+          question.correctAnswer = q.answer.charCodeAt(0) - 65 // 'A' -> 0
+        } else if (q.type === 'MULTIPLE') {
+          question.correctAnswer = q.answer.split(',').map(a => a.charCodeAt(0) - 65)
+        }
+      } else {
+        question.options = []
+        question.correctAnswer = q.answer
+      }
+
+      // 知识点
+      if (q.tags) {
+        question.knowledgePoints = q.tags.split(',').filter(t => t)
+      } else {
+        question.knowledgePoints = []
+      }
+
+      // 向后兼容字段
+      question.content = q.topic
+      question.explanation = q.analysis
+
+      return question
     }
 
     const initTimer = () => {
@@ -468,19 +548,42 @@ export default {
       }
 
       try {
-        const res = await submitAnswer(currentQuestion.value.id, userAnswer.value, mode.value)
-        answerResult.isCorrect = res.data.isCorrect
+        let answerText = ''
+        if (currentQuestion.value.type === 'SINGLE') {
+          answerText = String.fromCharCode(65 + userAnswer.value)
+        } else if (currentQuestion.value.type === 'MULTIPLE') {
+          answerText = userAnswer.value.map(i => String.fromCharCode(65 + i)).join(',')
+        } else {
+          answerText = userAnswer.value
+        }
+
+        const res = await submitAnswerApi({
+          questionId: currentQuestion.value.id,
+          userAnswer: answerText
+        })
+
+        // 判断答案是否正确
+        if (res.data && res.data.isCorrect !== undefined) {
+          answerResult.isCorrect = res.data.isCorrect
+        } else {
+          // 如果后端没有返回isCorrect，自己判断
+          if (currentQuestion.value.type === 'SINGLE') {
+            answerResult.isCorrect = userAnswer.value === currentQuestion.value.correctAnswer
+          } else if (currentQuestion.value.type === 'MULTIPLE') {
+            const userSet = new Set(userAnswer.value)
+            const correctSet = new Set(currentQuestion.value.correctAnswer)
+            answerResult.isCorrect = userSet.size === correctSet.size &&
+              [...userSet].every(x => correctSet.has(x))
+          } else {
+            answerResult.isCorrect = answerText === currentQuestion.value.answer
+          }
+        }
 
         // 更新题目状态
         questionStatus[currentIndex.value].answered = true
-        questionStatus[currentIndex.value].isCorrect = res.data.isCorrect
+        questionStatus[currentIndex.value].isCorrect = answerResult.isCorrect
 
         showAnalysis.value = true
-
-        // 如果是即时查看模式或套题模式，自动显示解析
-        if (showAnswerMode.value === 'immediate' || mode.value === 'batch') {
-          // 解析已经在下面显示了
-        }
       } catch (error) {
         ElMessage.error('提交答案失败')
       }
@@ -594,28 +697,28 @@ export default {
 
     const getDifficultyType = (difficulty) => {
       const typeMap = {
-        easy: 'success',
-        medium: 'warning',
-        hard: 'danger'
+        EASY: 'success',
+        MEDIUM: 'warning',
+        HARD: 'danger'
       }
       return typeMap[difficulty] || ''
     }
 
     const getDifficultyText = (difficulty) => {
       const textMap = {
-        easy: '基础',
-        medium: '中等',
-        hard: '困难'
+        EASY: '基础',
+        MEDIUM: '中等',
+        HARD: '困难'
       }
       return textMap[difficulty] || difficulty
     }
 
     const getTypeText = (type) => {
       const textMap = {
-        single: '单选',
-        multiple: '多选',
-        fill: '填空',
-        comprehensive: '综合'
+        SINGLE: '单选',
+        MULTIPLE: '多选',
+        BLANK: '填空',
+        COMPREHENSIVE: '综合'
       }
       return textMap[type] || type
     }

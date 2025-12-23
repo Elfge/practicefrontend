@@ -382,7 +382,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getWrongQuestions } from '@/api/mistake'
+import { getWrongQuestions, markMastered } from '@/api/mistake'
 import {
   Search,
   Refresh,
@@ -444,12 +444,13 @@ export default {
       try {
         const params = {
           current: currentPage.value,
-          size: pageSize.value,
-          subject: filters.subject
+          size: pageSize.value
         }
+        if (filters.subject) params.subject = filters.subject
+
         const res = await getWrongQuestions(params)
-        mistakes.value = res.data.records
-        totalMistakes.value = res.data.total
+        mistakes.value = res.data.records || []
+        totalMistakes.value = res.data.total || 0
       } catch (error) {
         ElMessage.error('加载错题失败')
       }
@@ -545,6 +546,7 @@ export default {
 
     const markReviewed = async (mistake) => {
       try {
+        await markMastered(mistake.id)
         mistake.reviewCount++
         ElMessage.success('已标记为已掌握')
       } catch (error) {
