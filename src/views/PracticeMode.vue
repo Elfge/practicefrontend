@@ -316,7 +316,7 @@ import {
   Star,
   Check
 } from '@element-plus/icons-vue'
-import { getQuestions, getRandomQuestion } from '@/api/practice'
+import { getQuestions, getRandomQuestion, collectQuestion, uncollectQuestion } from '@/api/practice'
 import { submitAnswer as submitAnswerApi } from '@/api/answer'
 
 export default {
@@ -623,9 +623,21 @@ export default {
       ElMessage.info(currentQuestion.value.isMarked ? '已标记' : '已取消标记')
     }
 
-    const toggleCollect = () => {
-      currentQuestion.value.isCollected = !currentQuestion.value.isCollected
-      ElMessage.info(currentQuestion.value.isCollected ? '已收藏' : '已取消收藏')
+    const toggleCollect = async () => {
+      try {
+        const question = currentQuestion.value
+        if (question.isCollected) {
+          await uncollectQuestion(question.id)
+          question.isCollected = false
+          ElMessage.success('已取消收藏')
+        } else {
+          await collectQuestion(question.id)
+          question.isCollected = true
+          ElMessage.success('已收藏')
+        }
+      } catch (error) {
+        ElMessage.error('操作失败')
+      }
     }
 
     const jumpToQuestion = (index) => {
