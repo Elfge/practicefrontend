@@ -4,6 +4,7 @@ export default createStore({
   state: {
     user: null,
     token: localStorage.getItem('token') || null,
+    theme: localStorage.getItem('theme') || 'default',
     questions: [],
     filters: {
       subject: '',
@@ -25,6 +26,9 @@ export default createStore({
         localStorage.removeItem('token')
       }
     },
+    SET_THEME(state, theme) {
+      state.theme = theme
+    },
     SET_QUESTIONS(state, questions) {
       state.questions = questions
     },
@@ -40,6 +44,13 @@ export default createStore({
     logout({ commit }) {
       commit('SET_TOKEN', null)
       commit('SET_USER', null)
+    },
+    setTheme({ commit }, theme) {
+      commit('SET_THEME', theme)
+    },
+    updateUserInfo({ commit, state }, userInfo) {
+      const updatedUser = { ...state.user, ...userInfo }
+      commit('SET_USER', updatedUser)
     },
     updateFilters({ commit }, filters) {
       commit('UPDATE_FILTERS', filters)

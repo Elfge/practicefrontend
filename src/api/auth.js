@@ -17,3 +17,29 @@ export const login = (data) => {
     data
   })
 }
+
+// 获取用户信息
+export const getUserInfo = () => {
+  return request({
+    url: '/api/user/info',
+    method: 'get'
+  })
+}
+
+// 更新用户资料
+export const updateProfile = (data) => {
+  return request({
+    url: '/api/user/profile',
+    method: 'put',
+    data
+  })
+}
+
+// 修改密码
+export const changePassword = (data) => {
+  return request({
+    url: '/api/user/password',
+    method: 'put',
+    data
+  })
+}

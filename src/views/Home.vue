@@ -119,14 +119,20 @@
 
           <el-card class="todo-card" style="margin-top: 20px;">
             <template #header>
-              <span>今日任务</span>
+              <div class="card-header-small">
+                <span>今日任务</span>
+                <el-link type="primary" @click="goToTasks">管理</el-link>
+              </div>
             </template>
 
-            <div class="todo-list">
-              <div class="todo-item" v-for="todo in todoList" :key="todo.id">
-                <el-checkbox v-model="todo.completed">
-                  <span :class="{ 'completed': todo.completed }">{{ todo.text }}</span>
+            <div class="todo-list-simple">
+              <div class="todo-item-simple" v-for="todo in todoList.slice(0, 3)" :key="todo.id">
+                <el-checkbox v-model="todo.completed" size="small">
+                  <span class="todo-text" :class="{ 'completed': todo.completed }">{{ todo.text }}</span>
                 </el-checkbox>
+              </div>
+              <div v-if="todoList.length === 0" class="empty-todo">
+                <el-empty description="暂无任务" :image-size="60" />
               </div>
             </div>
           </el-card>
@@ -136,7 +142,7 @@
   </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -173,12 +179,26 @@ export default {
       { name: '计算机网络', completed: 100, total: 150, percentage: 67, color: '#F56C6C' }
     ])
 
-    const todoList = ref([
-      { id: 1, text: '完成数据结构章节练习', completed: false },
-      { id: 2, text: '复习计算机网络知识点', completed: false },
-      { id: 3, text: '做一套模拟试卷', completed: false },
-      { id: 4, text: '整理错题本', completed: true }
-    ])
+    const todoList = ref([])
+
+    // 从 localStorage 加载任务
+    const loadTasks = () => {
+      const savedTasks = localStorage.getItem('todayTasks')
+      if (savedTasks) {
+        todoList.value = JSON.parse(savedTasks)
+      } else {
+        todoList.value = [
+          { id: 1, text: '完成数据结构章节练习', completed: false },
+          { id: 2, text: '复习计算机网络知识点', completed: false },
+          { id: 3, text: '做一套模拟试卷', completed: false },
+          { id: 4, text: '整理错题本', completed: true }
+        ]
+      }
+    }
+
+    onMounted(() => {
+      loadTasks()
+    })
 
     const chartOption = ref({
       tooltip: {
@@ -243,6 +263,10 @@ export default {
       router.push('/notes')
     }
 
+    const goToTasks = () => {
+      router.push('/profile')
+    }
+
     return {
       subjects,
       todoList,
@@ -250,7 +274,8 @@ export default {
       goToQuestionBank,
       startExam,
       viewMistakes,
-      viewNotes
+      viewNotes,
+      goToTasks
     }
   }
 }
@@ -393,20 +418,44 @@ export default {
 }
 
 .todo-card {
-  height: 250px;
+  height: 220px;
 }
 
-.todo-list {
-  height: 160px;
-  overflow-y: auto;
+.card-header-small {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.todo-item {
-  margin-bottom: 15px;
+.todo-list-simple {
+  padding: 5px 0;
 }
 
-.todo-item:last-child {
-  margin-bottom: 0;
+.todo-item-simple {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--bg-color-page, #fff);
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.todo-item-simple:hover {
+  background: #f5f7fa;
+}
+
+.todo-text {
+  font-size: 14px;
+  color: var(--text-color-primary, #303133);
+}
+
+.todo-text.completed {
+  text-decoration: line-through;
+  color: var(--text-color-secondary, #909399);
+}
+
+.empty-todo {
+  text-align: center;
+  padding: 20px 0;
 }
 
 .completed {

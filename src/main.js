@@ -5,6 +5,11 @@ import store from './store'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+import '@/assets/theme.css'
+
+// 初始化主题
+const savedTheme = localStorage.getItem('theme') || 'default'
+document.documentElement.setAttribute('data-theme', savedTheme)
 
 const app = createApp(App)
 

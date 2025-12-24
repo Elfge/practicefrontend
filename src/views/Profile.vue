@@ -1,5 +1,90 @@
 <template>
     <div class="profile-container">
+      <!-- 资料编辑对话框 -->
+      <el-dialog
+        v-model="editDialogVisible"
+        title="编辑资料"
+        width="500px"
+        @close="handleDialogClose"
+      >
+        <el-form
+          ref="editFormRef"
+          :model="editForm"
+          :rules="editRules"
+          label-width="80px"
+        >
+          <el-form-item label="用户名" prop="username">
+            <el-input v-model="editForm.username" placeholder="请输入用户名" />
+          </el-form-item>
+          <el-form-item label="邮箱" prop="email">
+            <el-input v-model="editForm.email" placeholder="请输入邮箱" />
+          </el-form-item>
+          <el-form-item label="考试日期" prop="examDate">
+            <el-date-picker
+              v-model="editForm.examDate"
+              type="date"
+              placeholder="选择考试日期"
+              style="width: 100%"
+              value-format="YYYY-MM-DD"
+            />
+          </el-form-item>
+        </el-form>
+
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="editDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="handleSaveProfile">保存</el-button>
+          </span>
+        </template>
+      </el-dialog>
+
+      <!-- 修改密码对话框 -->
+      <el-dialog
+        v-model="passwordDialogVisible"
+        title="修改密码"
+        width="450px"
+        @close="handlePasswordDialogClose"
+      >
+        <el-form
+          ref="passwordFormRef"
+          :model="passwordForm"
+          :rules="passwordRules"
+          label-width="90px"
+        >
+          <el-form-item label="原密码" prop="oldPassword">
+            <el-input
+              v-model="passwordForm.oldPassword"
+              type="password"
+              placeholder="请输入原密码"
+              show-password
+            />
+          </el-form-item>
+          <el-form-item label="新密码" prop="newPassword">
+            <el-input
+              v-model="passwordForm.newPassword"
+              type="password"
+              placeholder="请输入新密码(至少6位)"
+              show-password
+            />
+          </el-form-item>
+          <el-form-item label="确认密码" prop="confirmPassword">
+            <el-input
+              v-model="passwordForm.confirmPassword"
+              type="password"
+              placeholder="请再次输入新密码"
+              show-password
+            />
+          </el-form-item>
+        </el-form>
+
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="passwordDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="handleChangePassword">确认修改</el-button>
+          </span>
+        </template>
+      </el-dialog>
+
       <el-row :gutter="20">
         <!-- 左侧个人信息 -->
         <el-col :span="8">
@@ -29,8 +114,11 @@
 
             <el-divider />
 
-            <el-button type="primary" style="width: 100%" @click="editProfile">
+            <el-button type="primary" style="width: 100%; margin-bottom: 10px;" @click="editProfile">
               编辑资料
+            </el-button>
+            <el-button type="warning" style="width: 100%" @click="changePassword">
+              修改密码
             </el-button>
           </el-card>
 
@@ -61,6 +149,68 @@
               保存计划
             </el-button>
           </el-card>
+
+          <!-- 今日任务管理 -->
+          <el-card class="tasks-card" style="margin-top: 20px;">
+            <template #header>
+              <div class="card-header">
+                <span>今日任务</span>
+                <el-button type="primary" size="small" :icon="Plus" @click="showAddTaskDialog">
+                  添加任务
+                </el-button>
+              </div>
+            </template>
+
+            <div class="tasks-list">
+              <div v-if="tasks.length === 0" class="empty-tasks">
+                <el-empty description="暂无任务，点击上方按钮添加" :image-size="60" />
+              </div>
+              <div v-else>
+                <div
+                  v-for="task in tasks"
+                  :key="task.id"
+                  class="task-item"
+                  :class="{ 'task-completed': task.completed }"
+                >
+                  <div class="task-left">
+                    <el-checkbox v-model="task.completed" @change="toggleTask(task)" size="large" />
+                    <span class="task-text">{{ task.text }}</span>
+                  </div>
+                  <div class="task-actions">
+                    <el-button type="danger" size="small" :icon="Delete" circle @click="deleteTask(task.id)" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="tasks.length > 0" class="task-summary">
+              <span>完成进度: {{ completedTasksCount }}/{{ tasks.length }}</span>
+              <el-progress :percentage="taskProgress" :stroke-width="8" />
+            </div>
+          </el-card>
+
+          <!-- 添加任务对话框 -->
+          <el-dialog
+            v-model="addTaskDialogVisible"
+            title="添加新任务"
+            width="400px"
+          >
+            <el-form :model="taskForm" label-width="80px">
+              <el-form-item label="任务内容">
+                <el-input
+                  v-model="taskForm.text"
+                  placeholder="请输入任务内容"
+                  maxlength="50"
+                  show-word-limit
+                  @keyup.enter="addTask"
+                />
+              </el-form-item>
+            </el-form>
+            <template #footer>
+              <el-button @click="addTaskDialogVisible = false">取消</el-button>
+              <el-button type="primary" @click="addTask">确定</el-button>
+            </template>
+          </el-dialog>
         </el-col>
 
         <!-- 右侧统计数据 -->
@@ -177,11 +327,13 @@
   </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Delete } from '@element-plus/icons-vue'
 import { getUserStatistics, getSubjectStatistics, getWeakChapters } from '@/api/statistics'
+import { updateProfile, changePassword as changePasswordApi } from '@/api/auth'
 
 export default {
   name: 'Profile',
@@ -201,6 +353,78 @@ export default {
       dailyQuestions: 20,
       examDate: ''
     })
+
+    // 任务管理
+    const tasks = ref([])
+    const addTaskDialogVisible = ref(false)
+    const taskForm = reactive({
+      text: ''
+    })
+
+    // 从 localStorage 加载任务
+    const loadTasks = () => {
+      const savedTasks = localStorage.getItem('todayTasks')
+      if (savedTasks) {
+        tasks.value = JSON.parse(savedTasks)
+      } else {
+        // 默认任务
+        tasks.value = [
+          { id: 1, text: '完成数据结构章节练习', completed: false },
+          { id: 2, text: '复习计算机网络知识点', completed: false },
+          { id: 3, text: '整理错题本', completed: false }
+        ]
+      }
+    }
+
+    // 保存任务到 localStorage
+    const saveTasks = () => {
+      localStorage.setItem('todayTasks', JSON.stringify(tasks.value))
+    }
+
+    const completedTasksCount = computed(() => tasks.value.filter(t => t.completed).length)
+    const taskProgress = computed(() => {
+      if (tasks.value.length === 0) return 0
+      return Math.round((completedTasksCount.value / tasks.value.length) * 100)
+    })
+
+    const showAddTaskDialog = () => {
+      taskForm.text = ''
+      addTaskDialogVisible.value = true
+    }
+
+    const addTask = () => {
+      if (!taskForm.text.trim()) {
+        ElMessage.warning('请输入任务内容')
+        return
+      }
+      tasks.value.push({
+        id: Date.now(),
+        text: taskForm.text.trim(),
+        completed: false
+      })
+      saveTasks()
+      addTaskDialogVisible.value = false
+      ElMessage.success('任务添加成功')
+    }
+
+    const deleteTask = (taskId) => {
+      ElMessageBox.confirm('确定要删除这个任务吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        tasks.value = tasks.value.filter(t => t.id !== taskId)
+        saveTasks()
+        ElMessage.success('任务删除成功')
+      }).catch(() => {})
+    }
+
+    const toggleTask = (task) => {
+      saveTasks()
+      if (task.completed) {
+        ElMessage.success('任务完成！')
+      }
+    }
 
     const stats = ref({
       totalQuestions: 0,
@@ -316,13 +540,136 @@ export default {
     }
 
     onMounted(() => {
+      loadTasks()
       loadStatistics()
       loadWeakChapters()
       loadSubjectStatistics()
     })
 
+    // 资料编辑对话框
+    const editDialogVisible = ref(false)
+    const editFormRef = ref(null)
+    const editForm = reactive({
+      username: '',
+      email: '',
+      examDate: ''
+    })
+
+    // 表单验证规则
+    const editRules = {
+      username: [
+        { required: true, message: '请输入用户名', trigger: 'blur' },
+        { min: 2, max: 20, message: '用户名长度在 2 到 20 个字符', trigger: 'blur' }
+      ],
+      email: [
+        { required: true, message: '请输入邮箱', trigger: 'blur' },
+        { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+      ]
+    }
+
     const editProfile = () => {
-      ElMessage.info('编辑功能开发中...')
+      editForm.username = userInfo.value.username || ''
+      editForm.email = userInfo.value.email || ''
+      editForm.examDate = userInfo.value.examDate || ''
+      editDialogVisible.value = true
+    }
+
+    const handleDialogClose = () => {
+      editFormRef.value?.resetFields()
+    }
+
+    const handleSaveProfile = async () => {
+      if (!editFormRef.value) return
+
+      await editFormRef.value.validate(async (valid) => {
+        if (valid) {
+          try {
+            const { data } = await updateProfile(editForm)
+            if (data) {
+              // 更新 Vuex store 中的用户信息
+              await store.dispatch('updateUserInfo', {
+                ...userInfo.value,
+                username: editForm.username,
+                email: editForm.email,
+                examDate: editForm.examDate
+              })
+              ElMessage.success('资料更新成功')
+              editDialogVisible.value = false
+            }
+          } catch (error) {
+            ElMessage.error(error.response?.data?.message || '更新失败，请重试')
+          }
+        }
+      })
+    }
+
+    // 修改密码对话框
+    const passwordDialogVisible = ref(false)
+    const passwordFormRef = ref(null)
+    const passwordForm = reactive({
+      oldPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    })
+
+    const validateConfirmPassword = (rule, value, callback) => {
+      if (value === '') {
+        callback(new Error('请再次输入新密码'))
+      } else if (value !== passwordForm.newPassword) {
+        callback(new Error('两次输入的密码不一致'))
+      } else {
+        callback()
+      }
+    }
+
+    const passwordRules = {
+      oldPassword: [
+        { required: true, message: '请输入原密码', trigger: 'blur' }
+      ],
+      newPassword: [
+        { required: true, message: '请输入新密码', trigger: 'blur' },
+        { min: 6, message: '密码长度至少6位', trigger: 'blur' }
+      ],
+      confirmPassword: [
+        { required: true, validator: validateConfirmPassword, trigger: 'blur' }
+      ]
+    }
+
+    const changePassword = () => {
+      passwordForm.oldPassword = ''
+      passwordForm.newPassword = ''
+      passwordForm.confirmPassword = ''
+      passwordDialogVisible.value = true
+    }
+
+    const handlePasswordDialogClose = () => {
+      passwordFormRef.value?.resetFields()
+    }
+
+    const handleChangePassword = async () => {
+      if (!passwordFormRef.value) return
+
+      await passwordFormRef.value.validate(async (valid) => {
+        if (valid) {
+          try {
+            const { data } = await changePasswordApi({
+              oldPassword: passwordForm.oldPassword,
+              newPassword: passwordForm.newPassword
+            })
+            if (data) {
+              ElMessage.success('密码修改成功，请重新登录')
+              passwordDialogVisible.value = false
+              // 延迟后退出登录
+              setTimeout(() => {
+                store.dispatch('logout')
+                router.push('/login')
+              }, 1500)
+            }
+          } catch (error) {
+            ElMessage.error(error.response?.data?.message || '修改失败，请检查原密码是否正确')
+          }
+        }
+      })
     }
 
     const savePlan = () => {
@@ -339,9 +686,33 @@ export default {
       stats,
       weaknessData,
       progressChart,
+      tasks,
+      addTaskDialogVisible,
+      taskForm,
+      completedTasksCount,
+      taskProgress,
+      Plus,
+      Delete,
+      editDialogVisible,
+      editFormRef,
+      editForm,
+      editRules,
+      passwordDialogVisible,
+      passwordFormRef,
+      passwordForm,
+      passwordRules,
       editProfile,
+      handleDialogClose,
+      handleSaveProfile,
+      changePassword,
+      handlePasswordDialogClose,
+      handleChangePassword,
       savePlan,
-      practiceWeakness
+      practiceWeakness,
+      showAddTaskDialog,
+      addTask,
+      deleteTask,
+      toggleTask
     }
   }
 }
@@ -510,5 +881,82 @@ export default {
 .time-label {
   color: #909399;
   margin: 5px 0 0;
+}
+
+/* 任务管理样式 */
+.tasks-card {
+  margin-top: 20px;
+}
+
+.tasks-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tasks-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.empty-tasks {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  background: var(--bg-color-page, #fff);
+  border-radius: 8px;
+  border: 1px solid var(--border-color-light, #e4e7ed);
+  transition: all 0.3s ease;
+}
+
+.task-item:hover {
+  border-color: var(--primary-color, #409EFF);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.task-item.task-completed {
+  opacity: 0.6;
+}
+
+.task-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.task-text {
+  font-size: 14px;
+  color: var(--text-color-primary, #303133);
+}
+
+.task-completed .task-text {
+  text-decoration: line-through;
+  color: var(--text-color-secondary, #909399);
+}
+
+.task-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.task-summary {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color-light, #e4e7ed);
+}
+
+.task-summary span {
+  display: block;
+  font-size: 13px;
+  color: var(--text-color-regular, #606266);
+  margin-bottom: 8px;
 }
 </style>

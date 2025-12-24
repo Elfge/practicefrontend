@@ -39,6 +39,11 @@
           <span>模拟考试</span>
         </el-menu-item>
 
+        <el-menu-item index="/notes">
+          <el-icon><Notebook /></el-icon>
+          <span>笔记收藏</span>
+        </el-menu-item>
+
         <el-menu-item index="/profile">
           <el-icon><User /></el-icon>
           <span>个人中心</span>
@@ -46,6 +51,7 @@
       </el-menu>
 
       <div class="header-right">
+        <theme-switcher />
         <el-dropdown @command="handleCommand">
           <span class="user-info">
             <el-icon><UserFilled /></el-icon>
@@ -74,9 +80,13 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import ThemeSwitcher from './ThemeSwitcher.vue'
 
 export default {
   name: 'Layout',
+  components: {
+    ThemeSwitcher
+  },
   setup() {
     const route = useRoute()
     const router = useRouter()
@@ -245,6 +255,7 @@ export default {
   display: flex;
   align-items: center;
   padding: 0 24px;
+  gap: 16px;
 }
 
 .user-info {
@@ -269,5 +280,39 @@ export default {
   padding: 24px;
   flex: 1;
   overflow-y: auto;
+}
+
+/* 护眼模式样式 */
+[data-theme="eye-care"] .layout-container {
+  background-color: #FDF6E3;
+}
+
+[data-theme="eye-care"] .top-header {
+  background: linear-gradient(135deg, #FFF8E7 0%, #FFFAF0 100%);
+  border-bottom-color: #D4C4A8;
+}
+
+[data-theme="eye-care"] .logo {
+  background: linear-gradient(135deg, #CD853F 0%, #DAA520 100%);
+}
+
+[data-theme="eye-care"] .top-menu :deep(.el-menu-item:hover),
+[data-theme="eye-care"] .top-menu :deep(.el-sub-menu__title:hover) {
+  background-color: rgba(205, 133, 63, 0.15) !important;
+  color: #CD853F;
+}
+
+[data-theme="eye-care"] .top-menu :deep(.el-menu-item.is-active) {
+  background-color: rgba(205, 133, 63, 0.2) !important;
+  color: #CD853F;
+}
+
+[data-theme="eye-care"] .user-info:hover {
+  background-color: rgba(205, 133, 63, 0.15);
+  color: #CD853F;
+}
+
+[data-theme="eye-care"] .main-content {
+  background-color: #FDF6E3;
 }
 </style>

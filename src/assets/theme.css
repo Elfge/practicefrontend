@@ -1,0 +1,130 @@
+/* 默认主题样式 */
+:root,
+[data-theme="default"] {
+  /* 背景色 */
+  --bg-color: #f5f7fa;
+  --bg-color-page: #ffffff;
+  --bg-color-card: #ffffff;
+
+  /* 文字颜色 */
+  --text-color-primary: #303133;
+  --text-color-regular: #606266;
+  --text-color-secondary: #909399;
+
+  /* 边框颜色 */
+  --border-color: #dcdfe6;
+  --border-color-light: #e4e7ed;
+
+  /* 主题色 */
+  --primary-color: #409EFF;
+  --success-color: #67C23A;
+  --warning-color: #E6A23C;
+  --danger-color: #F56C6C;
+
+  /* 阴影 */
+  --shadow-base: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
+  --shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* 护眼主题样式 - 杏色主调 */
+[data-theme="eye-care"] {
+  /* 背景色 - 杏色系 */
+  --bg-color: #FDF6E3;
+  --bg-color-page: #FFF8E7;
+  --bg-color-card: #FFFAF0;
+
+  /* 文字颜色 - 柔和的棕色系 */
+  --text-color-primary: #5D4E37;
+  --text-color-regular: #6B5B45;
+  --text-color-secondary: #8B7355;
+
+  /* 边框颜色 */
+  --border-color: #D4C4A8;
+  --border-color-light: #E8DCC8;
+
+  /* 主题色 - 柔和的杏色系 */
+  --primary-color: #CD853F;
+  --success-color: #8FBC8F;
+  --warning-color: #DAA520;
+  --danger-color: #CD5C5C;
+
+  /* 阴影 - 柔和阴影 */
+  --shadow-base: 0 2px 4px rgba(139, 115, 85, 0.12), 0 0 6px rgba(139, 115, 85, 0.08);
+  --shadow-light: 0 2px 12px 0 rgba(139, 115, 85, 0.1);
+}
+
+/* 应用主题样式 */
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 卡片样式 */
+.el-card {
+  background-color: var(--bg-color-card);
+  border-color: var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 护眼模式下的特殊调整 */
+[data-theme="eye-care"] {
+  /* 降低对比度，减少眼睛疲劳 */
+  filter: contrast(0.95) saturate(0.9);
+}
+
+[data-theme="eye-care"] .el-card__header {
+  background-color: rgba(205, 133, 63, 0.05);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="eye-care"] .el-button--primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+[data-theme="eye-care"] .el-button--primary:hover {
+  background-color: #B8722F;
+  border-color: #B8722F;
+}
+
+[data-theme="eye-care"] .el-input__wrapper {
+  background-color: var(--bg-color-page);
+  border-color: var(--border-color);
+}
+
+[data-theme="eye-care"] .el-table {
+  background-color: var(--bg-color-card);
+}
+
+[data-theme="eye-care"] .el-table th,
+[data-theme="eye-care"] .el-table tr {
+  background-color: var(--bg-color-card);
+}
+
+[data-theme="eye-care"] .el-table__body tr:hover > td {
+  background-color: rgba(205, 133, 63, 0.08) !important;
+}
+
+[data-theme="eye-care"] .el-dialog {
+  background-color: var(--bg-color-card);
+}
+
+[data-theme="eye-care"] .el-drawer {
+  background-color: var(--bg-color-page);
+}
+
+[data-theme="eye-care"] .el-menu {
+  background-color: var(--bg-color-card);
+  border-right-color: var(--border-color);
+}
+
+[data-theme="eye-care"] .el-menu-item:hover,
+[data-theme="eye-care"] .el-sub-menu__title:hover {
+  background-color: rgba(205, 133, 63, 0.1);
+}
+
+[data-theme="eye-care"] .el-menu-item.is-active {
+  background-color: rgba(205, 133, 63, 0.15);
+  color: var(--primary-color);
+}
