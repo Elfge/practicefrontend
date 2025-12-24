@@ -127,8 +127,8 @@
 
             <div class="todo-list-simple">
               <div class="todo-item-simple" v-for="todo in todoList.slice(0, 3)" :key="todo.id">
-                <el-checkbox v-model="todo.completed" size="small">
-                  <span class="todo-text" :class="{ 'completed': todo.completed }">{{ todo.text }}</span>
+                <el-checkbox :model-value="todo.completed" @change="toggleTaskStatus(todo)" size="small">
+                  <span class="todo-text" :class="{ 'completed': todo.completed }">{{ todo.title || todo.text }}</span>
                 </el-checkbox>
               </div>
               <div v-if="todoList.length === 0" class="empty-todo">
@@ -156,6 +156,7 @@ import {
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 import { getUserStatistics, getSubjectStatistics, getCorrectRateTrend } from '@/api/statistics'
+import { getTodayTasks, toggleTaskComplete } from '@/api/tasks'
 
 use([
   CanvasRenderer,
@@ -187,18 +188,37 @@ export default {
 
     const todoList = ref([])
 
-    // 从 localStorage 加载任务
-    const loadTasks = () => {
-      const savedTasks = localStorage.getItem('todayTasks')
-      if (savedTasks) {
-        todoList.value = JSON.parse(savedTasks)
-      } else {
-        todoList.value = [
-          { id: 1, text: '完成数据结构章节练习', completed: false },
-          { id: 2, text: '复习计算机网络知识点', completed: false },
-          { id: 3, text: '做一套模拟试卷', completed: false },
-          { id: 4, text: '整理错题本', completed: true }
-        ]
+    // 从后端加载任务
+    const loadTasks = async () => {
+      try {
+        const res = await getTodayTasks()
+        if (res.data && res.data.length > 0) {
+          todoList.value = res.data
+        } else {
+          // 如果没有任务，显示默认空状态
+          todoList.value = []
+        }
+      } catch (error) {
+        console.error('加载任务失败:', error)
+        // 如果API调用失败，使用本地缓存作为后备
+        const savedTasks = localStorage.getItem('todayTasks')
+        if (savedTasks) {
+          todoList.value = JSON.parse(savedTasks)
+        } else {
+          todoList.value = []
+        }
+      }
+    }
+
+    // 切换任务完成状态
+    const toggleTaskStatus = async (task) => {
+      try {
+        await toggleTaskComplete(task.id, !task.completed)
+        task.completed = !task.completed
+        // 同步到本地存储作为备份
+        localStorage.setItem('todayTasks', JSON.stringify(todoList.value))
+      } catch (error) {
+        ElMessage.error('更新任务状态失败')
       }
     }
 
@@ -327,7 +347,8 @@ export default {
       startExam,
       viewMistakes,
       viewNotes,
-      goToTasks
+      goToTasks,
+      toggleTaskStatus
     }
   }
 }

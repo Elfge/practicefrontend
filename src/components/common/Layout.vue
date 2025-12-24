@@ -39,9 +39,14 @@
           <span>模拟考试</span>
         </el-menu-item>
 
+        <el-menu-item index="/collections">
+          <el-icon><Star /></el-icon>
+          <span>收藏题目</span>
+        </el-menu-item>
+
         <el-menu-item index="/notes">
           <el-icon><Notebook /></el-icon>
-          <span>笔记收藏</span>
+          <span>学习笔记</span>
         </el-menu-item>
 
         <el-menu-item index="/profile">
@@ -80,12 +85,32 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  HomeFilled,
+  Document,
+  Reading,
+  EditPen,
+  Star,
+  Notebook,
+  User,
+  UserFilled,
+  ArrowDown
+} from '@element-plus/icons-vue'
 import ThemeSwitcher from './ThemeSwitcher.vue'
 
 export default {
   name: 'Layout',
   components: {
-    ThemeSwitcher
+    ThemeSwitcher,
+    HomeFilled,
+    Document,
+    Reading,
+    EditPen,
+    Star,
+    Notebook,
+    User,
+    UserFilled,
+    ArrowDown
   },
   setup() {
     const route = useRoute()
