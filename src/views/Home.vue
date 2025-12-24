@@ -1,5 +1,5 @@
 <template>
-    <div class="home-container">
+    <div class="home-container" v-loading="loading">
       <!-- 统计卡片 -->
       <el-row :gutter="20" class="stats-row">
         <el-col :span="6">
@@ -9,7 +9,7 @@
                 <el-icon><Document /></el-icon>
               </div>
               <div class="stats-info">
-                <div class="stats-number">1,234</div>
+                <div class="stats-number">{{ stats.totalQuestions }}</div>
                 <div class="stats-label">总题数</div>
               </div>
             </div>
@@ -23,7 +23,7 @@
                 <el-icon><Check /></el-icon>
               </div>
               <div class="stats-info">
-                <div class="stats-number">856</div>
+                <div class="stats-number">{{ stats.completedQuestions }}</div>
                 <div class="stats-label">已完成</div>
               </div>
             </div>
@@ -37,7 +37,7 @@
                 <el-icon><CircleCheck /></el-icon>
               </div>
               <div class="stats-info">
-                <div class="stats-number">78%</div>
+                <div class="stats-number">{{ stats.correctRate }}%</div>
                 <div class="stats-label">正确率</div>
               </div>
             </div>
@@ -51,7 +51,7 @@
                 <el-icon><Calendar /></el-icon>
               </div>
               <div class="stats-info">
-                <div class="stats-number">45</div>
+                <div class="stats-number">{{ stats.studyDays }}</div>
                 <div class="stats-label">备考天数</div>
               </div>
             </div>
@@ -136,8 +136,9 @@
   </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
@@ -148,6 +149,7 @@ import {
   GridComponent
 } from 'echarts/components'
 import VChart from 'vue-echarts'
+import { getUserStatistics, getSubjectStatistics, getCorrectRateTrend } from '@/api/statistics'
 
 use([
   CanvasRenderer,
@@ -166,12 +168,16 @@ export default {
   setup() {
     const router = useRouter()
 
-    const subjects = ref([
-      { name: '数据结构', completed: 120, total: 200, percentage: 60, color: '#409EFF' },
-      { name: '计算机组成原理', completed: 150, total: 250, percentage: 60, color: '#67C23A' },
-      { name: '操作系统', completed: 180, total: 300, percentage: 60, color: '#E6A23C' },
-      { name: '计算机网络', completed: 100, total: 150, percentage: 67, color: '#F56C6C' }
-    ])
+    // 统计数据
+    const stats = ref({
+      totalQuestions: 0,
+      completedQuestions: 0,
+      correctRate: 0,
+      studyDays: 0
+    })
+
+    const subjects = ref([])
+    const loading = ref(true)
 
     const todoList = ref([
       { id: 1, text: '完成数据结构章节练习', completed: false },
@@ -185,7 +191,7 @@ export default {
         trigger: 'axis'
       },
       legend: {
-        data: ['数据结构', '计算机组成原理', '操作系统', '计算机网络']
+        data: []
       },
       grid: {
         left: '3%',
@@ -196,35 +202,79 @@ export default {
       xAxis: {
         type: 'category',
         boundaryGap: false,
-        data: ['第1周', '第2周', '第3周', '第4周', '第5周', '第6周']
+        data: []
       },
       yAxis: {
         type: 'value',
         min: 0,
         max: 100
       },
-      series: [
-        {
-          name: '数据结构',
-          type: 'line',
-          data: [65, 68, 70, 75, 78, 82]
-        },
-        {
-          name: '计算机组成原理',
-          type: 'line',
-          data: [60, 62, 65, 70, 72, 75]
-        },
-        {
-          name: '操作系统',
-          type: 'line',
-          data: [70, 72, 75, 78, 80, 83]
-        },
-        {
-          name: '计算机网络',
-          type: 'line',
-          data: [75, 78, 80, 85, 88, 90]
+      series: []
+    })
+
+    // 加载统计数据
+    const loadStatistics = async () => {
+      try {
+        loading.value = true
+
+        // 获取用户基础统计
+        const userStatsRes = await getUserStatistics()
+        if (userStatsRes.data) {
+          stats.value = {
+            totalQuestions: userStatsRes.data.totalAnswered || 0,
+            completedQuestions: userStatsRes.data.totalCorrect || 0,
+            correctRate: userStatsRes.data.correctRate || 0,
+            studyDays: 45 // 这个需要后端添加字段统计
+          }
         }
-      ]
+
+        // 获取各科目统计
+        const subjectStatsRes = await getSubjectStatistics()
+        if (subjectStatsRes.data) {
+          subjects.value = subjectStatsRes.data.map(item => ({
+            name: item.subjectName,
+            completed: item.correct || 0,
+            total: item.total || 0,
+            percentage: item.total > 0 ? Math.round((item.correct / item.total) * 100) : 0,
+            color: getSubjectColor(item.subject)
+          }))
+        }
+
+        // 获取正确率趋势（近7天）
+        const trendRes = await getCorrectRateTrend(7)
+        if (trendRes.data && trendRes.data.length > 0) {
+          chartOption.value.xAxis.data = trendRes.data.map(item => item.date)
+          
+          // 按科目组织数据（这里简化处理，实际需要后端返回按科目分组的趋势数据）
+          chartOption.value.series = [{
+            name: '整体正确率',
+            type: 'line',
+            data: trendRes.data.map(item => item.correctRate || 0)
+          }]
+          chartOption.value.legend.data = ['整体正确率']
+        }
+
+      } catch (error) {
+        console.error('加载统计数据失败:', error)
+        ElMessage.error('加载数据失败')
+      } finally {
+        loading.value = false
+      }
+    }
+
+    // 获取科目对应的颜色
+    const getSubjectColor = (subject) => {
+      const colorMap = {
+        'DS': '#409EFF',
+        'CO': '#67C23A',
+        'OS': '#E6A23C',
+        'CN': '#F56C6C'
+      }
+      return colorMap[subject] || '#909399'
+    }
+
+    onMounted(() => {
+      loadStatistics()
     })
 
     const goToQuestionBank = () => {
@@ -244,9 +294,11 @@ export default {
     }
 
     return {
+      stats,
       subjects,
       todoList,
       chartOption,
+      loading,
       goToQuestionBank,
       startExam,
       viewMistakes,

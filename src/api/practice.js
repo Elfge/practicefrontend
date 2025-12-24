@@ -69,3 +69,39 @@ export const getKnowledgePoints = (subject) => {
     params: { subject }
   })
 }
+
+// 上传题目文件（PDF OCR处理可能需要较长时间）
+export const uploadQuestions = (data) => {
+  return request({
+    url: '/api/import/upload',
+    method: 'post',
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 300000, // 5分钟超时
+    data
+  })
+}
+
+// 确认导入
+export const confirmImport = (importId) => {
+  return request({
+    url: `/api/import/confirm/${importId}`,
+    method: 'post'
+  })
+}
+
+// 收藏题目
+export const collectQuestion = (questionId) => {
+  return request({
+    url: `/api/collection/${questionId}`,
+    method: 'post'
+  })
+}
+
+// 取消收藏
+export const uncollectQuestion = (questionId) => {
+  return request({
+    url: `/api/collection/${questionId}`,
+    method: 'delete'
+  })
+}
+
