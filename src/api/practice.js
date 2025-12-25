@@ -186,3 +186,13 @@ export const startExam = (paperId) => {
 }
 
 
+// 导出题目
+export const exportQuestions = (params) => {
+  return request({
+    url: '/api/question/export',
+    method: 'get',
+    params,
+    responseType: 'blob'
+  })
+}
+

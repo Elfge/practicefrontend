@@ -449,7 +449,7 @@
 <script>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getQuestions, addQuestion, updateQuestion, deleteQuestion as deleteQuestionApi, getChapters, uploadQuestions, confirmImport } from '@/api/practice'
+import { getQuestions, addQuestion, updateQuestion, deleteQuestion as deleteQuestionApi, getChapters, uploadQuestions, confirmImport, exportQuestions as exportQuestionsApi } from '@/api/practice'
 import { UploadFilled } from '@element-plus/icons-vue'
 
 export default {
@@ -821,8 +821,39 @@ export default {
       }
     }
 
-    const exportQuestions = () => {
-      ElMessage.info('导出功能开发中...')
+    const exportQuestions = async () => {
+      try {
+        // 如果有选中的题目，导出选中的；否则按筛选条件导出
+        let params = { format: 'excel' }
+
+        if (selectedQuestions.value.length > 0) {
+          params.ids = selectedQuestions.value.map(q => q.id).join(',')
+          ElMessage.info(`正在导出 ${selectedQuestions.value.length} 道题目...`)
+        } else {
+          if (filters.subject) params.subject = filters.subject
+          if (filters.difficulty) params.difficulty = filters.difficulty
+          if (filters.type) params.type = filters.type
+          if (filters.year) params.year = filters.year
+          ElMessage.info('正在准备导出，请稍候...')
+        }
+
+        const res = await exportQuestionsApi(params)
+
+        // 创建下载链接
+        const blob = new Blob([res], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `题目库_${new Date().toLocaleDateString()}.xlsx`
+        link.click()
+        window.URL.revokeObjectURL(url)
+
+        ElMessage.success('导出成功')
+      } catch (error) {
+        ElMessage.error('导出失败，请稍后重试')
+      }
     }
 
     watch(() => showAddDialog.value, (newVal) => {

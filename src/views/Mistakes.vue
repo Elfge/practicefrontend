@@ -179,7 +179,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="scope">
             <el-button type="primary" size="small" @click="viewMistake(scope.row)">
               查看
@@ -189,6 +189,9 @@
             </el-button>
             <el-button type="warning" size="small" @click="markReviewed(scope.row)">
               已掌握
+            </el-button>
+            <el-button type="danger" size="small" @click="deleteMistake(scope.row)">
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -218,6 +221,9 @@
                 </el-button>
                 <el-button type="success" size="small" @click="addNote(mistake)">
                   笔记
+                </el-button>
+                <el-button type="danger" size="small" @click="deleteMistake(mistake)">
+                  删除
                 </el-button>
               </div>
             </el-card>
@@ -382,7 +388,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getWrongQuestions, markMastered } from '@/api/mistake'
+import { getWrongQuestions, markMastered, deleteWrongQuestion, exportWrongQuestions } from '@/api/mistake'
 import {
   Search,
   Refresh,
@@ -559,8 +565,58 @@ export default {
       router.push('/practice/special?review=true')
     }
 
-    const exportMistakes = () => {
-      ElMessage.info('导出功能开发中...')
+    const deleteMistake = async (mistake) => {
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除这道错题吗？删除后将无法恢复。`,
+          '提示',
+          {
+            confirmButtonText: '确定删除',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        await deleteWrongQuestion(mistake.id)
+        ElMessage.success('删除成功')
+
+        // 从本地列表中移除
+        const index = mistakes.value.findIndex(m => m.id === mistake.id)
+        if (index > -1) {
+          mistakes.value.splice(index, 1)
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          ElMessage.error('删除失败')
+        }
+      }
+    }
+
+    const exportMistakes = async () => {
+      try {
+        const params = {}
+        if (filters.subject) params.subject = filters.subject
+        if (filters.reason) params.reason = filters.reason
+
+        ElMessage.info('正在准备导出，请稍候...')
+
+        const res = await exportWrongQuestions(params)
+
+        // 创建下载链接
+        const blob = new Blob([res], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `错题本_${new Date().toLocaleDateString()}.xlsx`
+        link.click()
+        window.URL.revokeObjectURL(url)
+
+        ElMessage.success('导出成功')
+      } catch (error) {
+        ElMessage.error('导出失败，请稍后重试')
+      }
     }
 
     const clearReviewed = async () => {
@@ -646,6 +702,7 @@ export default {
       addNote,
       saveNote,
       markReviewed,
+      deleteMistake,
       startReview,
       exportMistakes,
       clearReviewed,

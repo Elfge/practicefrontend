@@ -25,3 +25,38 @@ export const markMastered = (id) => {
     method: 'put'
   })
 }
+
+// 删除单个错题
+export const deleteWrongQuestion = (id) => {
+  return request({
+    url: `/api/wrong-question/${id}`,
+    method: 'delete'
+  })
+}
+
+// 批量删除错题
+export const batchDeleteWrongQuestions = (ids) => {
+  return request({
+    url: '/api/wrong-question/batch',
+    method: 'delete',
+    data: { ids }
+  })
+}
+
+// 导出错题
+export const exportWrongQuestions = (params) => {
+  return request({
+    url: '/api/wrong-question/export',
+    method: 'get',
+    params,
+    responseType: 'blob'
+  })
+}
+
+// 获取错题统计
+export const getWrongQuestionStats = () => {
+  return request({
+    url: '/api/wrong-question/statistics',
+    method: 'get'
+  })
+}
