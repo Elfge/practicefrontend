@@ -52,6 +52,11 @@ const routes = [
         component: () => import('@/views/Mistakes.vue')
       },
       {
+        path: 'import',
+        name: 'Import',
+        component: () => import('@/views/Import.vue')
+      },
+      {
         path: 'knowledge',
         name: 'Knowledge',
         component: () => import('@/views/Knowledge.vue')
@@ -60,6 +65,11 @@ const routes = [
         path: 'notes',
         name: 'Notes',
         component: () => import('@/views/Notes.vue')
+      },
+      {
+        path: 'tasks',
+        name: 'Tasks',
+        component: () => import('@/views/Tasks.vue')
       },
       {
         path: 'collections',

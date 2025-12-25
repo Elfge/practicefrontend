@@ -21,7 +21,7 @@ export const login = (data) => {
 // 获取用户信息
 export const getUserInfo = () => {
   return request({
-    url: '/api/user/info',
+    url: '/api/auth/info',
     method: 'get'
   })
 }
@@ -29,7 +29,7 @@ export const getUserInfo = () => {
 // 更新用户资料
 export const updateProfile = (data) => {
   return request({
-    url: '/api/user/profile',
+    url: '/api/auth/info',
     method: 'put',
     data
   })
@@ -38,7 +38,7 @@ export const updateProfile = (data) => {
 // 修改密码
 export const changePassword = (data) => {
   return request({
-    url: '/api/user/password',
+    url: '/api/auth/password',
     method: 'put',
     data
   })

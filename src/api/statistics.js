@@ -32,3 +32,30 @@ export const getWeakChapters = () => {
     method: 'get'
   })
 }
+
+// 获取学习热力图数据
+export const getHeatMap = (params) => {
+  return request({
+    url: '/api/statistics/heat-map',
+    method: 'get',
+    params
+  })
+}
+
+// 获取每日学习详情
+export const getDailyDetail = (params) => {
+  return request({
+    url: '/api/statistics/daily',
+    method: 'get',
+    params
+  })
+}
+
+// 生成学习报告
+export const generateReport = (params) => {
+  return request({
+    url: '/api/statistics/report',
+    method: 'get',
+    params
+  })
+}

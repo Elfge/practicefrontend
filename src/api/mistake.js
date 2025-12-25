@@ -60,3 +60,30 @@ export const getWrongQuestionStats = () => {
     method: 'get'
   })
 }
+
+// 获取待复习错题（艾宾浩斯）
+export const getReviewQuestions = (params) => {
+  return request({
+    url: '/api/wrong-question/review',
+    method: 'get',
+    params
+  })
+}
+
+// 更新复习状态
+export const updateReviewStatus = (id, remembered) => {
+  return request({
+    url: `/api/wrong-question/${id}/review`,
+    method: 'put',
+    data: { remembered }
+  })
+}
+
+// 设置错误原因
+export const setWrongReason = (id, reason) => {
+  return request({
+    url: `/api/wrong-question/${id}/reason`,
+    method: 'put',
+    data: { reason }
+  })
+}
