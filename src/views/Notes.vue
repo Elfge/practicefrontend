@@ -87,6 +87,7 @@
                   <el-option label="计算机网络" value="计算机网络" />
                   <el-option label="其他" value="其他" />
                 </el-select>
+                <el-button type="success" :icon="Check" @click="manualSave">保存</el-button>
                 <el-button type="danger" :icon="Delete" @click="deleteCurrentNote">删除</el-button>
               </template>
               <template v-else>
@@ -132,7 +133,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Delete } from '@element-plus/icons-vue'
+import { Plus, Search, Delete, Check } from '@element-plus/icons-vue'
 
 export default {
   name: 'Notes',
@@ -239,6 +240,14 @@ export default {
       }
     }
 
+    // 手动保存笔记
+    const manualSave = () => {
+      if (!currentNote.value) return
+
+      saveCurrentNote()
+      ElMessage.success('笔记已保存')
+    }
+
     // 处理内容变化（防抖保存）
     const handleContentChange = () => {
       clearTimeout(saveTimer.value)
@@ -326,9 +335,11 @@ export default {
       Plus,
       Search,
       Delete,
+      Check,
       createNewNote,
       selectNote,
       saveCurrentNote,
+      manualSave,
       handleContentChange,
       deleteCurrentNote,
       handleSearch,

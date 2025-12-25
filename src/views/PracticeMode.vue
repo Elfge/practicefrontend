@@ -141,15 +141,15 @@
               <el-button
                 type="primary"
                 @click="nextQuestion"
-                :disabled="!hasAnswer"
-                v-if="!showAnalysis"
+                :disabled="!hasAnswer && !showAnalysis"
+                v-if="!showAnalysis || (showAnalysis && questionStatus[currentIndex].answered)"
               >
                 {{ currentIndex === totalQuestions - 1 ? '完成' : '下一题' }}
               </el-button>
               <el-button
                 type="primary"
                 @click="submitAnswer"
-                v-if="showAnalysis && mode === 'single' && showAnswerMode === 'delay'"
+                v-if="!showAnalysis && hasAnswer"
               >
                 提交答案
               </el-button>
@@ -347,6 +347,7 @@ export default {
     const sessionId = ref(null) // 练习会话ID
 
     const questionStatus = reactive([])
+    const userAnswers = reactive([]) // 存储每个题目的用户答案
 
     const currentQuestion = computed(() => {
       return questions.value[currentIndex.value] || null
@@ -428,6 +429,7 @@ export default {
                   answered: false,
                   isCorrect: false
                 })
+                userAnswers.push(null)
               })
               // 恢复已答题的状态
               if (res.data.userAnswers) {
@@ -462,6 +464,7 @@ export default {
               answered: false,
               isCorrect: false
             })
+            userAnswers.push(null)
           })
         } else {
           ElMessage.error('未找到符合条件的题目')
@@ -589,6 +592,13 @@ export default {
           }
         }
 
+        // 保存用户答案（多选题需要深拷贝）
+        if (currentQuestion.value.type === 'MULTIPLE' && Array.isArray(userAnswer.value)) {
+          userAnswers[currentIndex.value] = [...userAnswer.value]
+        } else {
+          userAnswers[currentIndex.value] = userAnswer.value
+        }
+
         // 更新题目状态
         questionStatus[currentIndex.value].answered = true
         questionStatus[currentIndex.value].isCorrect = answerResult.isCorrect
@@ -613,18 +623,32 @@ export default {
     }
 
     const nextQuestion = async () => {
-      if (mode.value === 'single' && showAnswerMode.value === 'delay') {
-        // 延迟查看模式，先提交答案
-        await submitAnswer()
-      } else if (!showAnalysis.value) {
-        await submitAnswer()
+      // 只有当前题目未答过题时才提交答案
+      if (!questionStatus[currentIndex.value].answered) {
+        if (mode.value === 'single' && showAnswerMode.value === 'delay') {
+          // 延迟查看模式，先提交答案
+          await submitAnswer()
+        } else if (!showAnalysis.value && hasAnswer.value) {
+          await submitAnswer()
+        }
       }
 
       if (currentIndex.value < totalQuestions.value - 1) {
         currentIndex.value++
-        userAnswer.value = null
-        showAnalysis.value = false
-        answerResult.isCorrect = false
+        // 恢复下一题的答案状态
+        if (questionStatus[currentIndex.value].answered) {
+          showAnalysis.value = true
+          // 多选题需要深拷贝，否则会引用同一个数组
+          if (currentQuestion.value?.type === 'MULTIPLE' && Array.isArray(userAnswers[currentIndex.value])) {
+            userAnswer.value = [...userAnswers[currentIndex.value]]
+          } else {
+            userAnswer.value = userAnswers[currentIndex.value]
+          }
+        } else {
+          showAnalysis.value = false
+          userAnswer.value = null
+        }
+        answerResult.isCorrect = questionStatus[currentIndex.value].isCorrect
       } else {
         // 最后一题，完成练习
         completePractice()
@@ -634,9 +658,20 @@ export default {
     const previousQuestion = () => {
       if (currentIndex.value > 0) {
         currentIndex.value--
-        // 恢复之前的答案
+        // 恢复之前的答案和解析状态
         if (questionStatus[currentIndex.value].answered) {
           showAnalysis.value = true
+          // 多选题需要深拷贝，否则会引用同一个数组
+          if (currentQuestion.value?.type === 'MULTIPLE' && Array.isArray(userAnswers[currentIndex.value])) {
+            userAnswer.value = [...userAnswers[currentIndex.value]]
+          } else {
+            userAnswer.value = userAnswers[currentIndex.value]
+          }
+          answerResult.isCorrect = questionStatus[currentIndex.value].isCorrect
+        } else {
+          showAnalysis.value = false
+          userAnswer.value = null
+          answerResult.isCorrect = false
         }
       }
     }
@@ -669,9 +704,17 @@ export default {
       // 恢复该题的答案和解析状态
       if (questionStatus[index].answered) {
         showAnalysis.value = true
+        // 多选题需要深拷贝，否则会引用同一个数组
+        if (questions.value[index]?.type === 'MULTIPLE' && Array.isArray(userAnswers[index])) {
+          userAnswer.value = [...userAnswers[index]]
+        } else {
+          userAnswer.value = userAnswers[index]
+        }
+        answerResult.isCorrect = questionStatus[index].isCorrect
       } else {
         showAnalysis.value = false
         userAnswer.value = null
+        answerResult.isCorrect = false
       }
     }
 

@@ -102,16 +102,16 @@
             </template>
 
             <div class="quick-actions">
-              <el-button type="primary" icon="Document" @click="goToQuestionBank">
+              <el-button type="primary" @click="goToQuestionBank">
                 开始刷题
               </el-button>
-              <el-button type="success" icon="DataAnalysis" @click="startExam">
+              <el-button type="success" @click="startExam">
                 模拟考试
               </el-button>
-              <el-button type="warning" icon="Notebook" @click="viewMistakes">
+              <el-button type="warning" @click="viewMistakes">
                 错题本
               </el-button>
-              <el-button type="info" icon="Collection" @click="viewNotes">
+              <el-button type="info" @click="viewNotes">
                 笔记收藏
               </el-button>
             </div>
@@ -488,6 +488,11 @@ export default {
 .quick-actions .el-button {
   height: 50px;
   font-size: 14px;
+  min-width: 0;
+  flex: 1;
+  width: 100%;
+  text-align: center;
+  justify-content: center;
 }
 
 .todo-card {

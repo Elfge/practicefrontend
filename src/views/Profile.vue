@@ -114,12 +114,14 @@
 
             <el-divider />
 
-            <el-button type="primary" style="width: 100%; margin-bottom: 10px;" @click="editProfile">
-              编辑资料
-            </el-button>
-            <el-button type="warning" style="width: 100%" @click="changePassword">
-              修改密码
-            </el-button>
+            <div class="action-buttons">
+              <el-button type="primary" @click="editProfile">
+                编辑资料
+              </el-button>
+              <el-button type="warning" @click="changePassword">
+                修改密码
+              </el-button>
+            </div>
           </el-card>
 
           <!-- 学习计划 -->
@@ -749,6 +751,16 @@ export default {
 .profile-info {
   text-align: left;
   padding: 0 20px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.action-buttons .el-button {
+  flex: 1;
+  min-width: 0;
 }
 
 .info-item {
