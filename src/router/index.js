@@ -67,6 +67,11 @@ const routes = [
         component: () => import('@/views/Collections.vue')
       },
       {
+        path: 'mock-exam',
+        name: 'MockExam',
+        component: () => import('@/views/MockExam.vue')
+      },
+      {
         path: 'exam',
         name: 'Exam',
         component: () => import('@/views/Exam.vue')
@@ -75,6 +80,11 @@ const routes = [
         path: 'exam/:type/:id',
         name: 'ExamDetail',
         component: () => import('@/views/ExamDetail.vue')
+      },
+      {
+        path: 'exam/result/:id',
+        name: 'ExamResult',
+        component: () => import('@/views/ExamResult.vue')
       }
     ]
   }

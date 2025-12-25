@@ -259,7 +259,7 @@ import {
   Star,
   Delete
 } from '@element-plus/icons-vue'
-import { getQuestions } from '@/api/practice'
+import { getQuestions, submitExamResult } from '@/api/practice'
 
 export default {
   name: 'ExamDetail',
@@ -275,6 +275,7 @@ export default {
 
     const examType = route.params.type // 'past' 或 'custom'
     const examId = route.params.id
+    const sessionId = ref(route.query.session || null)
 
     const questions = ref([])
     const currentQuestionIndex = ref(0)
@@ -348,14 +349,33 @@ export default {
         const res = await getQuestions({
           count: examInfo.value.totalQuestions
         })
-        questions.value = res.data.list.map((q) => ({
-          ...q,
-          score: getQuestionScore(q.type),
-          marked: false
-        }))
+        if (res.data && res.data.list) {
+          questions.value = res.data.list.map((q) => ({
+            ...q,
+            content: q.topic || q.content, // 后端用topic，前端用content
+            options: parseOptions(q.options),
+            score: getQuestionScore(q.type),
+            marked: false
+          }))
+          examInfo.value.totalQuestions = questions.value.length
+        }
       } catch (error) {
+        console.error('加载试卷失败', error)
         ElMessage.error('加载试卷失败')
         router.push('/exam')
+      }
+    }
+
+    // 解析选项JSON
+    const parseOptions = (optionsStr) => {
+      if (!optionsStr) return []
+      try {
+        const parsed = JSON.parse(optionsStr)
+        if (Array.isArray(parsed)) return parsed
+        // 如果是对象格式 {A: "...", B: "..."}
+        return Object.values(parsed)
+      } catch {
+        return []
       }
     }
 
@@ -456,25 +476,42 @@ export default {
       finishExam()
     }
 
-    const finishExam = () => {
+    const finishExam = async () => {
       if (timerInterval) {
         clearInterval(timerInterval)
       }
 
-      const result = {
-        examId,
-        examType,
-        answers,
-        timeUsed: examInfo.value.duration * 60 - remainingTime.value,
-        answeredCount: answeredCount.value,
-        score: calculateScore()
+      const timeUsed = examInfo.value.duration * 60 - remainingTime.value
+
+      // 调用后端API提交考试
+      if (sessionId.value) {
+        try {
+          const res = await submitExamResult(sessionId.value, {
+            answers: { ...answers },
+            timeUsed
+          })
+          if (res.data) {
+            // 保存结果到localStorage供结果页使用
+            localStorage.setItem(`exam_${sessionId.value}`, JSON.stringify(res.data))
+          }
+        } catch (error) {
+          console.error('提交考试失败', error)
+        }
+      } else {
+        // 无sessionId时，本地模拟结果
+        const result = {
+          examId,
+          examType,
+          answers,
+          timeUsed,
+          answeredCount: answeredCount.value,
+          score: calculateScore()
+        }
+        localStorage.setItem(`exam_${examId}`, JSON.stringify(result))
       }
 
-      // 保存考试结果
-      localStorage.setItem(`exam_${examId}`, JSON.stringify(result))
-
       ElMessage.success('考试已完成，正在生成报告...')
-      router.push(`/exam/result/${examId}`)
+      router.push(`/exam/result/${sessionId.value || examId}`)
     }
 
     const calculateScore = () => {
@@ -490,21 +527,31 @@ export default {
     }
 
     const getQuestionTypeTag = (type) => {
+      if (!type) return 'info'
       const tagMap = {
-        single: 'primary',
-        multiple: 'success',
-        fill: 'warning',
-        comprehensive: 'danger'
+        'single': 'primary',
+        'SINGLE': 'primary',
+        'multiple': 'success',
+        'MULTIPLE': 'success',
+        'fill': 'warning',
+        'BLANK': 'warning',
+        'comprehensive': 'danger',
+        'COMPREHENSIVE': 'danger'
       }
-      return tagMap[type] || ''
+      return tagMap[type] || 'info'
     }
 
     const getQuestionTypeText = (type) => {
+      if (!type) return '未知'
       const textMap = {
-        single: '单选题',
-        multiple: '多选题',
-        fill: '填空题',
-        comprehensive: '综合题'
+        'single': '单选题',
+        'SINGLE': '单选题',
+        'multiple': '多选题',
+        'MULTIPLE': '多选题',
+        'fill': '填空题',
+        'BLANK': '填空题',
+        'comprehensive': '综合题',
+        'COMPREHENSIVE': '综合题'
       }
       return textMap[type] || type
     }

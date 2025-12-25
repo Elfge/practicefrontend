@@ -208,10 +208,10 @@
 
         <el-form-item label="科目选择">
           <el-checkbox-group v-model="customExamForm.subjects">
-            <el-checkbox label="ds">数据结构</el-checkbox>
-            <el-checkbox label="cs">计算机组成原理</el-checkbox>
-            <el-checkbox label="os">操作系统</el-checkbox>
-            <el-checkbox label="cn">计算机网络</el-checkbox>
+            <el-checkbox value="ds">数据结构</el-checkbox>
+            <el-checkbox value="cs">计算机组成原理</el-checkbox>
+            <el-checkbox value="os">操作系统</el-checkbox>
+            <el-checkbox value="cn">计算机网络</el-checkbox>
           </el-checkbox-group>
         </el-form-item>
 
@@ -306,6 +306,7 @@
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { startExam, createCustomExam as createCustomExamApi } from '@/api/practice'
 import {
   Clock,
   Setting
@@ -488,11 +489,22 @@ export default {
       showCustomExamForm.value = true
     }
 
-    const selectPastExam = (exam) => {
-      router.push(`/exam/past/${exam.id}`)
+    const selectPastExam = async (exam) => {
+      try {
+        const res = await startExam(exam.id)
+        if (res.data && res.data.sessionId) {
+          showPastExamSelector.value = false
+          router.push(`/exam/past/${exam.id}?session=${res.data.sessionId}`)
+        } else {
+          ElMessage.error('创建考试会话失败')
+        }
+      } catch (error) {
+        console.error('开始考试失败', error)
+        ElMessage.error('开始考试失败')
+      }
     }
 
-    const createCustomExam = () => {
+    const createCustomExam = async () => {
       // 验证表单
       if (!customExamForm.name) {
         ElMessage.warning('请输入试卷名称')
@@ -503,12 +515,35 @@ export default {
         return
       }
 
-      // 创建模拟卷
-      ElMessage.success('模拟卷创建成功')
-      showCustomExamForm.value = false
+      // 映射科目代码
+      const subjectMap = {
+        ds: 'DS',
+        cs: 'CO',
+        os: 'OS',
+        cn: 'CN'
+      }
+      const subjects = customExamForm.subjects.map(s => subjectMap[s] || s)
 
-      // 跳转到考试页面
-      router.push('/exam/custom/new')
+      try {
+        const res = await createCustomExamApi({
+          subject: subjects.join(','),
+          difficulty: Object.keys(customExamForm.difficulty).find(k => customExamForm.difficulty[k] > 50) || 'MEDIUM',
+          count: customExamForm.questionCount,
+          duration: customExamForm.duration,
+          types: Object.keys(customExamForm.questionTypes).filter(k => customExamForm.questionTypes[k] > 0).join(',')
+        })
+
+        if (res.data && res.data.sessionId) {
+          ElMessage.success('模拟卷创建成功')
+          showCustomExamForm.value = false
+          router.push(`/exam/custom/new?session=${res.data.sessionId}`)
+        } else {
+          ElMessage.error('创建模拟卷失败')
+        }
+      } catch (error) {
+        console.error('创建模拟卷失败', error)
+        ElMessage.error('创建模拟卷失败')
+      }
     }
 
     const viewReport = (exam) => {

@@ -185,6 +185,49 @@ export const startExam = (paperId) => {
   })
 }
 
+// 创建自定义模拟考试
+export const createCustomExam = (data) => {
+  return request({
+    url: '/api/exam/custom',
+    method: 'post',
+    data
+  })
+}
+
+// 获取考试记录列表
+export const getExamRecords = (limit = 20) => {
+  return request({
+    url: '/api/exam/records',
+    method: 'get',
+    params: { limit }
+  })
+}
+
+// 获取考试详情
+export const getExamRecordDetail = (recordId) => {
+  return request({
+    url: `/api/exam/records/${recordId}`,
+    method: 'get'
+  })
+}
+
+// 获取考试分析
+export const getExamAnalysis = (recordId) => {
+  return request({
+    url: `/api/exam/records/${recordId}/analysis`,
+    method: 'get'
+  })
+}
+
+// 提交考试（交卷）
+export const submitExamResult = (sessionId, data) => {
+  return request({
+    url: `/api/exam/submit/${sessionId}`,
+    method: 'post',
+    data
+  })
+}
+
 
 // 导出题目
 export const exportQuestions = (params) => {
