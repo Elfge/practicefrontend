@@ -105,3 +105,84 @@ export const uncollectQuestion = (questionId) => {
   })
 }
 
+// ============ 练习会话管理 ============
+
+// 创建练习会话（获取批量随机题目）
+export const createPracticeSession = (data) => {
+  return request({
+    url: '/api/practice/session',
+    method: 'post',
+    data
+  })
+}
+
+// 获取最近练习记录
+export const getRecentSessions = (limit = 10) => {
+  return request({
+    url: '/api/practice/session/list',
+    method: 'get',
+    params: { limit }
+  })
+}
+
+// 获取练习会话详情（用于恢复练习）
+export const getSessionDetail = (sessionId) => {
+  return request({
+    url: `/api/practice/session/${sessionId}`,
+    method: 'get'
+  })
+}
+
+// 更新练习会话进度
+export const updateSessionProgress = (sessionId, data) => {
+  return request({
+    url: `/api/practice/session/${sessionId}`,
+    method: 'put',
+    data
+  })
+}
+
+// 完成练习会话
+export const completeSession = (sessionId) => {
+  return request({
+    url: `/api/practice/session/${sessionId}/complete`,
+    method: 'put'
+  })
+}
+
+// 删除练习记录
+export const deleteSession = (sessionId) => {
+  return request({
+    url: `/api/practice/session/${sessionId}`,
+    method: 'delete'
+  })
+}
+
+// ============ 试卷管理（套题模式） ============
+
+// 获取试卷列表
+export const getExamPapers = (params) => {
+  return request({
+    url: '/api/exam/papers',
+    method: 'get',
+    params
+  })
+}
+
+// 获取试卷详情
+export const getExamPaperDetail = (paperId) => {
+  return request({
+    url: `/api/exam/papers/${paperId}`,
+    method: 'get'
+  })
+}
+
+// 开始套题练习
+export const startExam = (paperId) => {
+  return request({
+    url: `/api/exam/papers/${paperId}/start`,
+    method: 'post'
+  })
+}
+
+

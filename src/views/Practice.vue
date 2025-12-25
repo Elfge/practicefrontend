@@ -177,13 +177,43 @@
         <el-button type="primary" @click="startPractice">开始练习</el-button>
       </template>
     </el-dialog>
+
+    <!-- 套题选择弹窗 -->
+    <el-dialog
+      v-model="showPaperSelect"
+      title="选择试卷"
+      width="700px"
+    >
+      <el-table :data="examPapers" style="width: 100%" v-loading="loadingPapers">
+        <el-table-column prop="title" label="试卷名称" />
+        <el-table-column prop="year" label="年份" width="80" />
+        <el-table-column prop="subject" label="科目" width="100" />
+        <el-table-column prop="questionCount" label="题数" width="80" />
+        <el-table-column prop="duration" label="时长" width="100">
+          <template #default="scope">
+            {{ scope.row.duration }}分钟
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="120">
+          <template #default="scope">
+            <el-button type="primary" size="small" @click="startExamPaper(scope.row)">
+              开始考试
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="showPaperSelect = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { getRecentSessions, getExamPapers, startExam } from '@/api/practice'
 
 export default {
   name: 'Practice',
@@ -200,46 +230,59 @@ export default {
       timer: true
     })
 
-    const recentPractice = ref([
-      {
-        id: 1,
-        mode: 'single',
-        subject: '数据结构',
-        chapter: '内部排序',
-        progress: 65,
-        accuracy: 78,
-        time: '2024-01-15 14:30',
-        completed: false
-      },
-      {
-        id: 2,
-        mode: 'batch',
-        subject: '操作系统',
-        chapter: '进程管理',
-        progress: 100,
-        accuracy: 85,
-        time: '2024-01-14 09:00',
-        completed: true
-      },
-      {
-        id: 3,
-        mode: 'special',
-        subject: '计算机组成原理',
-        chapter: '存储器系统',
-        progress: 40,
-        accuracy: 70,
-        time: '2024-01-13 16:45',
-        completed: false
+    const recentPractice = ref([])
+
+    // 加载最近练习记录
+    const loadRecentPractice = async () => {
+      try {
+        const res = await getRecentSessions(10)
+        if (res.data) {
+          recentPractice.value = res.data
+        }
+      } catch (error) {
+        console.error('加载练习记录失败', error)
       }
-    ])
+    }
+
+    onMounted(() => {
+      loadRecentPractice()
+    })
 
     const enterSingleMode = () => {
       selectedMode.value = 'single'
       showSettings.value = true
     }
 
-    const enterBatchMode = () => {
-      router.push('/practice/batch')
+    // 套题模式相关
+    const showPaperSelect = ref(false)
+    const examPapers = ref([])
+    const loadingPapers = ref(false)
+
+    const enterBatchMode = async () => {
+      showPaperSelect.value = true
+      loadingPapers.value = true
+      try {
+        const res = await getExamPapers()
+        if (res.data) {
+          examPapers.value = res.data
+        }
+      } catch (error) {
+        ElMessage.error('加载试卷列表失败')
+      } finally {
+        loadingPapers.value = false
+      }
+    }
+
+    const startExamPaper = async (paper) => {
+      try {
+        const res = await startExam(paper.id)
+        if (res.data && res.data.sessionId) {
+          showPaperSelect.value = false
+          router.push(`/practice/batch?session=${res.data.sessionId}&paper=${paper.id}`)
+        }
+      } catch (error) {
+        ElMessage.error('开始考试失败: ' + (error.message || '请重试'))
+      }
     }
 
     const enterSpecialMode = () => {
@@ -317,10 +360,14 @@ export default {
       selectedMode,
       practiceSettings,
       recentPractice,
+      showPaperSelect,
+      examPapers,
+      loadingPapers,
       enterSingleMode,
       enterBatchMode,
       enterSpecialMode,
       startPractice,
+      startExamPaper,
       continuePractice,
       viewAllHistory,
       getModeText,

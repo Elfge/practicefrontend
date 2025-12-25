@@ -316,7 +316,7 @@ import {
   Star,
   Check
 } from '@element-plus/icons-vue'
-import { getQuestions, getRandomQuestion, collectQuestion, uncollectQuestion } from '@/api/practice'
+import { collectQuestion, uncollectQuestion, createPracticeSession, getSessionDetail, updateSessionProgress } from '@/api/practice'
 import { submitAnswer as submitAnswerApi } from '@/api/answer'
 
 export default {
@@ -344,6 +344,7 @@ export default {
     const timer = ref(0)
     const examTime = ref(10800) // 3小时 = 10800秒
     const subjectiveScore = ref(7)
+    const sessionId = ref(null) // 练习会话ID
 
     const questionStatus = reactive([])
 
@@ -414,50 +415,59 @@ export default {
         const difficulty = route.query.difficulty || undefined
         const chapter = route.query.chapter || undefined
 
-        if (mode.value === 'single') {
-          // 单题模式：逐个获取随机题目
-          for (let i = 0; i < count; i++) {
-            try {
-              const params = {}
-              if (subject) params.subject = subject
-              if (difficulty) params.difficulty = difficulty
-              if (chapter) params.chapter = chapter
-
-              const res = await getRandomQuestion(params)
-              if (res.data) {
-                questions.value.push(parseQuestionData(res.data))
+        // 检查是否是恢复练习
+        if (route.query.continue) {
+          const resumeId = parseInt(route.query.continue)
+          try {
+            const res = await getSessionDetail(resumeId)
+            if (res.data) {
+              sessionId.value = resumeId
+              questions.value = res.data.questions.map(q => parseQuestionData(q))
+              questions.value.forEach(() => {
                 questionStatus.push({
                   answered: false,
                   isCorrect: false
                 })
-              }
-            } catch (e) {
-              // 单个题目加载失败，继续
-            }
-          }
-        } else if (mode.value === 'batch' || mode.value === 'special') {
-          // 套题模式和专项模式：批量获取
-          const params = {
-            current: 1,
-            size: count
-          }
-          if (subject) params.subject = subject
-          if (difficulty) params.difficulty = difficulty
-          if (chapter) params.chapter = chapter
-
-          const res = await getQuestions(params)
-          if (res.data && res.data.records) {
-            questions.value = res.data.records.map(q => parseQuestionData(q))
-            questions.value.forEach(() => {
-              questionStatus.push({
-                answered: false,
-                isCorrect: false
               })
-            })
+              // 恢复已答题的状态
+              if (res.data.userAnswers) {
+                Object.keys(res.data.userAnswers).forEach(qid => {
+                  const idx = questions.value.findIndex(q => q.id === parseInt(qid))
+                  if (idx >= 0) {
+                    questionStatus[idx].answered = true
+                  }
+                })
+              }
+              return
+            }
+          } catch (e) {
+            console.error('恢复练习失败', e)
           }
         }
+
+        // 创建新的练习会话
+        const res = await createPracticeSession({
+          mode: mode.value,
+          subject: subject,
+          chapter: chapter,
+          difficulty: difficulty,
+          count: count
+        })
+
+        if (res.data && res.data.questions) {
+          sessionId.value = res.data.sessionId
+          questions.value = res.data.questions.map(q => parseQuestionData(q))
+          questions.value.forEach(() => {
+            questionStatus.push({
+              answered: false,
+              isCorrect: false
+            })
+          })
+        } else {
+          ElMessage.error('未找到符合条件的题目')
+        }
       } catch (error) {
-        ElMessage.error('加载题目失败')
+        ElMessage.error('加载题目失败: ' + (error.message || '请检查网络连接'))
       }
     }
 
@@ -582,6 +592,19 @@ export default {
         // 更新题目状态
         questionStatus[currentIndex.value].answered = true
         questionStatus[currentIndex.value].isCorrect = answerResult.isCorrect
+
+        // 更新服务器端的进度
+        if (sessionId.value) {
+          try {
+            await updateSessionProgress(sessionId.value, {
+              currentIndex: currentIndex.value,
+              userAnswer: answerText,
+              isCorrect: answerResult.isCorrect
+            })
+          } catch (e) {
+            console.error('更新进度失败', e)
+          }
+        }
 
         showAnalysis.value = true
       } catch (error) {
