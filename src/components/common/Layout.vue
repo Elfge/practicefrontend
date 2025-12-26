@@ -31,7 +31,6 @@
           </template>
           <el-menu-item index="/practice">刷题模式</el-menu-item>
           <el-menu-item index="/mistakes">错题本</el-menu-item>
-          <el-menu-item index="/knowledge">考点溯源</el-menu-item>
         </el-sub-menu>
 
         <el-menu-item index="/exam">

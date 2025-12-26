@@ -513,7 +513,7 @@ export default {
     }
 
     const viewReport = (exam) => {
-      router.push(`/exam/report/${exam.id}`)
+      router.push(`/exam/result/${exam.id}`)
     }
 
     const reviewMistakes = (exam) => {
