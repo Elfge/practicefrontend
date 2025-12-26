@@ -109,6 +109,10 @@
             <el-icon><Delete /></el-icon>
             清除已复习
           </el-button>
+          <el-button type="danger" @click="batchDeleteMistakes" :disabled="selectedMistakes.length === 0">
+            <el-icon><Delete /></el-icon>
+            批量删除 ({{ selectedMistakes.length }})
+          </el-button>
         </el-space>
       </div>
     </el-card>
@@ -388,7 +392,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getWrongQuestions, markMastered, deleteWrongQuestion, exportWrongQuestions } from '@/api/mistake'
+import { getWrongQuestions, markMastered, deleteWrongQuestion, batchDeleteWrongQuestions, exportWrongQuestions } from '@/api/mistake'
 import {
   Search,
   Refresh,
@@ -638,6 +642,38 @@ export default {
       }
     }
 
+    const batchDeleteMistakes = async () => {
+      if (selectedMistakes.value.length === 0) {
+        ElMessage.warning('请先选择要删除的错题')
+        return
+      }
+
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除选中的 ${selectedMistakes.value.length} 道错题吗？删除后将无法恢复。`,
+          '批量删除确认',
+          {
+            confirmButtonText: '确定删除',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+
+        const ids = selectedMistakes.value.map(m => m.id)
+        await batchDeleteWrongQuestions(ids)
+        ElMessage.success(`成功删除 ${ids.length} 道错题`)
+
+        // 从本地列表中移除
+        mistakes.value = mistakes.value.filter(m => !ids.includes(m.id))
+        totalMistakes.value -= ids.length
+        selectedMistakes.value = []
+      } catch (error) {
+        if (error !== 'cancel') {
+          ElMessage.error('批量删除失败')
+        }
+      }
+    }
+
     const practiceAgain = (mistake) => {
       router.push(`/practice/single?question=${mistake.id}`)
     }
@@ -706,6 +742,7 @@ export default {
       startReview,
       exportMistakes,
       clearReviewed,
+      batchDeleteMistakes,
       practiceAgain,
       viewKnowledge,
       handlePicturePreview,

@@ -316,7 +316,7 @@ import {
   Star,
   Check
 } from '@element-plus/icons-vue'
-import { collectQuestion, uncollectQuestion, createPracticeSession, getSessionDetail, updateSessionProgress } from '@/api/practice'
+import { collectQuestion, uncollectQuestion, createPracticeSession, getSessionDetail, updateSessionProgress, completeSession } from '@/api/practice'
 import { submitAnswer as submitAnswerApi } from '@/api/answer'
 
 export default {
@@ -729,13 +729,21 @@ export default {
             type: 'warning'
           }
         )
+        // 完成会话以记录学习时长
+        if (sessionId.value) {
+          await completeSession(sessionId.value)
+        }
         router.push('/practice')
       } catch {
         // 用户取消
       }
     }
 
-    const completePractice = () => {
+    const completePractice = async () => {
+      // 完成会话以记录学习时长
+      if (sessionId.value) {
+        await completeSession(sessionId.value)
+      }
       if (mode.value === 'batch') {
         showBatchResult.value = true
       } else {

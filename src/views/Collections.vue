@@ -480,15 +480,24 @@ export default {
         }
 
         if (activeFolder.value !== 'all') {
-          params.folderId = activeFolder.value
+          params.folder = activeFolder.value
         }
         if (filters.subject) params.subject = filters.subject
         if (filters.type) params.type = filters.type
 
         const res = await getCollectionList(params)
+        console.log('Collection API Response:', res.data)
+        console.log('activeFolder:', activeFolder.value, 'filters:', filters)
         questions.value = res.data.records || []
         total.value = res.data.total || 0
-        totalCount.value = res.data.totalCount || total.value
+        
+        // Only update totalCount when viewing all collections without filters
+        if (activeFolder.value === 'all' && !filters.subject && !filters.type) {
+          totalCount.value = total.value
+          console.log('Updated totalCount to:', totalCount.value)
+        } else {
+          console.log('Skipped totalCount update - activeFolder:', activeFolder.value, 'filters:', filters)
+        }
       } catch (error) {
         ElMessage.error('加载收藏列表失败')
       } finally {
@@ -534,7 +543,7 @@ export default {
     }
 
     const practiceQuestion = (question) => {
-      router.push(`/practice/single?question=${question.id}`)
+      router.push(`/practice/single?question=${question.questionId}`)
     }
 
     const cancelCollect = async (question) => {
@@ -550,8 +559,9 @@ export default {
         )
 
         const { uncollectQuestion } = await import('@/api/practice')
-        await uncollectQuestion(question.id)
+        await uncollectQuestion(question.questionId)
         ElMessage.success('已取消收藏')
+        await loadFolders()
         await loadCollections()
       } catch {
         // 用户取消
@@ -571,9 +581,10 @@ export default {
         )
 
         const { uncollectQuestion } = await import('@/api/practice')
-        await Promise.all(selectedQuestions.value.map(q => uncollectQuestion(q.id)))
+        await Promise.all(selectedQuestions.value.map(q => uncollectQuestion(q.questionId)))
         ElMessage.success('已取消收藏')
         selectedQuestions.value = []
+        await loadFolders()
         await loadCollections()
       } catch {
         // 用户取消
@@ -595,10 +606,11 @@ export default {
     const confirmMove = async () => {
       try {
         await Promise.all(
-          moveQuestions.value.map(q => moveQuestionToFolder(q.id, selectedFolderId.value))
+          moveQuestions.value.map(q => moveQuestionToFolder(q.questionId, selectedFolderId.value))
         )
         ElMessage.success('移动成功')
         showMoveDialog.value = false
+        await loadFolders()
         await loadCollections()
       } catch (error) {
         ElMessage.error('移动失败')
