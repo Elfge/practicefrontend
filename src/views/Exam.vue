@@ -303,10 +303,10 @@
 </template>
 
 <script>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { startExam, createCustomExam as createCustomExamApi } from '@/api/practice'
+import { startExam, createCustomExam as createCustomExamApi, getExamRecords } from '@/api/practice'
 import {
   Clock,
   Setting
@@ -344,41 +344,7 @@ export default {
       }
     })
 
-    const recentExams = ref([
-      {
-        id: 1,
-        type: 'past',
-        name: '2024年408真题',
-        date: '2024-01-15',
-        score: 125,
-        totalScore: 150,
-        accuracy: 83,
-        usedTime: 10500,
-        rank: '前20%'
-      },
-      {
-        id: 2,
-        type: 'custom',
-        name: '数据结构专项模拟',
-        date: '2024-01-10',
-        score: 42,
-        totalScore: 50,
-        accuracy: 84,
-        usedTime: 3600,
-        rank: '前15%'
-      },
-      {
-        id: 3,
-        type: 'past',
-        name: '2023年408真题',
-        date: '2024-01-05',
-        score: 118,
-        totalScore: 150,
-        accuracy: 79,
-        usedTime: 10800,
-        rank: '前30%'
-      }
-    ])
+    const recentExams = ref([])
 
     const pastExamsByYear = ref([
       {
@@ -585,6 +551,33 @@ export default {
     const getDifficultyRate = (difficulty) => {
       return difficulty
     }
+
+    const loadRecentExams = async () => {
+      try {
+        const res = await getExamRecords(5)
+        if (res.data && Array.isArray(res.data)) {
+          recentExams.value = res.data
+            .filter(session => session.completed) // 只显示已完成的
+            .map(session => ({
+              id: session.id,
+              type: 'custom',
+              name: `模拟考试 - ${session.subject || '408综合'}`,
+              date: session.createTime,
+              score: Math.round((session.correctCount / session.totalCount) * 150),
+              totalScore: 150,
+              accuracy: Math.round(session.accuracy || 0),
+              usedTime: session.studyTime ? session.studyTime * 60 : 0,
+              rank: '-'
+            }))
+        }
+      } catch (error) {
+        console.error('加载考试记录失败', error)
+      }
+    }
+
+    onMounted(() => {
+      loadRecentExams()
+    })
 
     return {
       showPastExamSelector,
