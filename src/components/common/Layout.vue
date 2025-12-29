@@ -19,7 +19,7 @@
           <span>首页</span>
         </el-menu-item>
 
-        <el-menu-item index="/question-bank">
+        <el-menu-item v-if="isAdmin" index="/question-bank">
           <el-icon><Document /></el-icon>
           <span>题库管理</span>
         </el-menu-item>
@@ -118,6 +118,7 @@ export default {
 
     const activeMenu = computed(() => route.path)
     const user = computed(() => store.state.user)
+    const isAdmin = computed(() => store.getters.isAdmin)
 
     const breadcrumb = computed(() => {
       const breadcrumbMap = {
@@ -157,6 +158,7 @@ export default {
     return {
       activeMenu,
       user,
+      isAdmin,
       breadcrumb,
       handleCommand
     }

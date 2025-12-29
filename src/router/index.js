@@ -34,7 +34,8 @@ const routes = [
       {
         path: 'question-bank',
         name: 'QuestionBank',
-        component: () => import('@/views/QuestionBank.vue')
+        component: () => import('@/views/QuestionBank.vue'),
+        meta: { requiresAdmin: true }
       },
       {
         path: 'practice',
@@ -106,9 +107,15 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem('token')
-  if (to.meta.requiresAuth && !isAuthenticated) {
+  const token = localStorage.getItem('token')
+  const userStr = localStorage.getItem('user')
+  const user = userStr ? JSON.parse(userStr) : null
+
+  if (to.meta.requiresAuth && !token) {
     next('/login')
+  } else if (to.meta.requiresAdmin && user?.role !== 'ADMIN') {
+    // 非管理员尝试访问管理员页面，重定向到首页
+    next('/home')
   } else {
     next()
   }

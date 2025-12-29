@@ -1,8 +1,12 @@
 import { createStore } from 'vuex'
 
+// 从localStorage恢复user信息
+const storedUser = localStorage.getItem('user')
+const initialUser = storedUser ? JSON.parse(storedUser) : null
+
 export default createStore({
   state: {
-    user: null,
+    user: initialUser,
     token: localStorage.getItem('token') || null,
     theme: localStorage.getItem('theme') || 'default',
     questions: [],
@@ -17,6 +21,11 @@ export default createStore({
   mutations: {
     SET_USER(state, user) {
       state.user = user
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user))
+      } else {
+        localStorage.removeItem('user')
+      }
     },
     SET_TOKEN(state, token) {
       state.token = token
@@ -58,13 +67,14 @@ export default createStore({
   },
   getters: {
     isAuthenticated: state => !!state.token,
+    isAdmin: state => state.user?.role === 'ADMIN',
     filteredQuestions: state => {
       return state.questions.filter(question => {
         return (!state.filters.subject || question.subject === state.filters.subject) &&
-               (!state.filters.chapter || question.chapter === state.filters.chapter) &&
-               (!state.filters.difficulty || question.difficulty === state.filters.difficulty) &&
-               (!state.filters.questionType || question.type === state.filters.questionType) &&
-               (!state.filters.year || question.year === state.filters.year)
+          (!state.filters.chapter || question.chapter === state.filters.chapter) &&
+          (!state.filters.difficulty || question.difficulty === state.filters.difficulty) &&
+          (!state.filters.questionType || question.type === state.filters.questionType) &&
+          (!state.filters.year || question.year === state.filters.year)
       })
     }
   }
