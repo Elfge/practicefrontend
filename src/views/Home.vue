@@ -483,15 +483,17 @@ export default {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 15px;
+  align-items: stretch;
 }
 
 .quick-actions .el-button {
-  height: 50px;
+  height: 50px !important;
   font-size: 14px;
-  min-width: 0;
-  flex: 1;
   width: 100%;
-  text-align: center;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
 }
 
