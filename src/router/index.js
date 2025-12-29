@@ -82,14 +82,19 @@ const routes = [
         component: () => import('@/views/Exam.vue')
       },
       {
-        path: 'exam/:type/:id',
-        name: 'ExamDetail',
-        component: () => import('@/views/ExamDetail.vue')
-      },
-      {
         path: 'exam/result/:id',
         name: 'ExamResult',
         component: () => import('@/views/ExamResult.vue')
+      },
+      {
+        path: 'exam/review/:id',
+        name: 'ExamReview',
+        component: () => import('@/views/ExamReview.vue')
+      },
+      {
+        path: 'exam/:type/:id',
+        name: 'ExamDetail',
+        component: () => import('@/views/ExamDetail.vue')
       }
     ]
   }

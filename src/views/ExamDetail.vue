@@ -61,7 +61,7 @@
               <div class="question-stem" v-html="currentQuestion.content"></div>
 
               <!-- 选择题选项 -->
-              <div v-if="currentQuestion.type === 'single'" class="options-container">
+              <div v-if="currentQuestion.type === 'SINGLE' || currentQuestion.type === 'single'" class="options-container">
                 <el-radio-group v-model="answers[currentQuestion.id]">
                   <div v-for="(option, index) in currentQuestion.options" :key="index" class="option-item">
                     <el-radio :label="index">
@@ -72,7 +72,7 @@
                 </el-radio-group>
               </div>
 
-              <div v-else-if="currentQuestion.type === 'multiple'" class="options-container">
+              <div v-else-if="currentQuestion.type === 'MULTIPLE' || currentQuestion.type === 'multiple'" class="options-container">
                 <el-checkbox-group v-model="answers[currentQuestion.id]">
                   <div v-for="(option, index) in currentQuestion.options" :key="index" class="option-item">
                     <el-checkbox :label="index">
@@ -84,7 +84,7 @@
               </div>
 
               <!-- 填空题 -->
-              <div v-else-if="currentQuestion.type === 'fill'" class="fill-container">
+              <div v-else-if="currentQuestion.type === 'BLANK' || currentQuestion.type === 'fill'" class="fill-container">
                 <div v-for="(blank, index) in currentQuestion.blanks" :key="index" class="blank-item">
                   <span>填空{{ index + 1 }}：</span>
                   <el-input
@@ -95,7 +95,7 @@
               </div>
 
               <!-- 综合题 -->
-              <div v-else-if="currentQuestion.type === 'comprehensive'" class="comprehensive-container">
+              <div v-else-if="currentQuestion.type === 'COMPREHENSIVE' || currentQuestion.type === 'comprehensive'" class="comprehensive-container">
                 <el-input
                   v-model="answers[currentQuestion.id]"
                   type="textarea"
@@ -250,7 +250,7 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -259,7 +259,7 @@ import {
   Star,
   Delete
 } from '@element-plus/icons-vue'
-import { getQuestions, submitExamResult } from '@/api/practice'
+import { getQuestions, submitExamResult, getSessionDetail } from '@/api/practice'
 
 export default {
   name: 'ExamDetail',
@@ -297,12 +297,15 @@ export default {
     })
 
     const answeredCount = computed(() => {
-      return Object.values(answers).filter(answer => {
+      const count = Object.values(answers).filter(answer => {
         if (Array.isArray(answer)) {
-          return answer.length > 0
+          // 检查数组中是否有非空元素
+          return answer.some(item => item !== null && item !== undefined && item !== '')
         }
         return answer !== null && answer !== undefined && answer !== ''
       }).length
+      console.log('DEBUG answeredCount:', count, 'answers keys:', Object.keys(answers), 'answers:', answers)
+      return count
     })
 
     const unansweredCount = computed(() => {
@@ -333,9 +336,9 @@ export default {
     let timerInterval = null
 
     onMounted(async () => {
+      console.log('DEBUG onMounted - sessionId:', sessionId.value, 'route.query:', route.query)
       await loadExamData()
       startTimer()
-      initAnswers()
     })
 
     onBeforeUnmount(() => {
@@ -344,20 +347,63 @@ export default {
       }
     })
 
+    // 监听路由变化（切换不同年份的真题时）
+    watch(() => route.query.session, async (newSession, oldSession) => {
+      if (newSession && newSession !== oldSession) {
+        sessionId.value = newSession
+        // 重新加载考试数据
+        await loadExamData()
+        // 重置索引和计时器
+        currentQuestionIndex.value = 0
+        if (timerInterval) {
+          clearInterval(timerInterval)
+        }
+        startTimer()
+      }
+    })
+
     const loadExamData = async () => {
       try {
+        // 从session获取题目列表
+        if (sessionId.value) {
+          const res = await getSessionDetail(sessionId.value)
+          console.log('Session detail response:', res.data) // DEBUG
+          if (res.data && res.data.questions) {
+            console.log('First question:', res.data.questions[0]) // DEBUG
+            questions.value = res.data.questions.map((q) => ({
+              ...q,
+              content: q.topic || q.content,
+              options: parseOptions(q.options),
+              score: getQuestionScore(q.type),
+              marked: false,
+              // 填空题：从answer计算填空数（逗号分隔）
+              blanks: (q.type === 'BLANK' || q.type === 'fill') 
+                ? (q.answer ? q.answer.split(',').length : 1)
+                : undefined
+            }))
+            console.log('Parsed first question:', questions.value[0]) // DEBUG
+            examInfo.value.totalQuestions = questions.value.length
+            // 重置答案状态（清除上一次考试的数据）
+            initAnswers()
+            return
+          }
+        }
+        
+        // 如果没有sessionId，降级到随机获取（兼容旧逻辑）
         const res = await getQuestions({
           count: examInfo.value.totalQuestions
         })
         if (res.data && res.data.list) {
           questions.value = res.data.list.map((q) => ({
             ...q,
-            content: q.topic || q.content, // 后端用topic，前端用content
+            content: q.topic || q.content,
             options: parseOptions(q.options),
             score: getQuestionScore(q.type),
             marked: false
           }))
           examInfo.value.totalQuestions = questions.value.length
+          // 重置答案状态
+          initAnswers()
         }
       } catch (error) {
         console.error('加载试卷失败', error)
@@ -390,15 +436,29 @@ export default {
     }
 
     const initAnswers = () => {
+      console.log('DEBUG initAnswers - BEFORE clear, answers keys:', Object.keys(answers))
+      
+      // 创建新的答案对象
+      const newAnswers = {}
       questions.value.forEach(question => {
-        if (question.type === 'multiple') {
-          answers[question.id] = []
-        } else if (question.type === 'fill') {
-          answers[question.id] = new Array(question.blanks || 1).fill('')
+        if (question.type === 'MULTIPLE' || question.type === 'multiple') {
+          newAnswers[question.id] = []
+        } else if (question.type === 'BLANK' || question.type === 'fill') {
+          newAnswers[question.id] = new Array(question.blanks || 1).fill('')
         } else {
-          answers[question.id] = null
+          newAnswers[question.id] = null
         }
       })
+      
+      // 完全替换answers对象的内容
+      // 先删除所有旧key
+      Object.keys(answers).forEach(key => {
+        delete answers[key]
+      })
+      // 再复制新key
+      Object.assign(answers, newAnswers)
+      
+      console.log('DEBUG initAnswers - AFTER init, answers keys:', Object.keys(answers), 'total questions:', questions.value.length)
     }
 
     const startTimer = () => {
@@ -483,11 +543,39 @@ export default {
 
       const timeUsed = examInfo.value.duration * 60 - remainingTime.value
 
+      // 转换答案格式：数组 → 字符串
+      const formattedAnswers = {}
+      for (const [questionId, answer] of Object.entries(answers)) {
+        const question = questions.value.find(q => q.id === parseInt(questionId))
+        
+        if (Array.isArray(answer)) {
+          // 多选题：[0,1,2] → "A,B,C"
+          if (question?.type === 'MULTIPLE' || question?.type === 'multiple') {
+            formattedAnswers[questionId] = answer
+              .map(idx => String.fromCharCode(65 + idx))
+              .join(',')
+          }
+          // 填空题：["答案1", "答案2"] → "答案1,答案2"
+          else if (question?.type === 'BLANK' || question?.type === 'fill') {
+            formattedAnswers[questionId] = answer.join(',')
+          }
+          else {
+            formattedAnswers[questionId] = answer.join(',')
+          }
+        } else if (typeof answer === 'number') {
+          // 单选题：0 → "A"
+          formattedAnswers[questionId] = String.fromCharCode(65 + answer)
+        } else {
+          // 其他类型直接使用
+          formattedAnswers[questionId] = answer ? String(answer) : ''
+        }
+      }
+
       // 调用后端API提交考试
       if (sessionId.value) {
         try {
           const res = await submitExamResult(sessionId.value, {
-            answers: { ...answers },
+            answers: formattedAnswers,
             timeUsed
           })
           if (res.data) {
@@ -502,7 +590,7 @@ export default {
         const result = {
           examId,
           examType,
-          answers,
+          answers: formattedAnswers,
           timeUsed,
           answeredCount: answeredCount.value,
           score: calculateScore()
