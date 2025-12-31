@@ -24,6 +24,11 @@
           <span>题库管理</span>
         </el-menu-item>
 
+        <el-menu-item v-if="isAdmin" index="/user-management">
+          <el-icon><UserFilled /></el-icon>
+          <span>用户管理</span>
+        </el-menu-item>
+
         <el-sub-menu index="practice">
           <template #title>
             <el-icon><Reading /></el-icon>
@@ -124,6 +129,7 @@ export default {
       const breadcrumbMap = {
         '/home': '首页',
         '/question-bank': '题库管理',
+        '/user-management': '用户管理',
         '/profile': '个人中心'
       }
       return breadcrumbMap[route.path] || ''

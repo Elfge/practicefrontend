@@ -38,6 +38,12 @@ const routes = [
         meta: { requiresAdmin: true }
       },
       {
+        path: 'user-management',
+        name: 'UserManagement',
+        component: () => import('@/views/UserManagement.vue'),
+        meta: { requiresAdmin: true }
+      },
+      {
         path: 'practice',
         name: 'Practice',
         component: () => import('@/views/Practice.vue')
