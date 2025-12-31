@@ -306,7 +306,7 @@ export default {
     }
 
     const viewAllHistory = () => {
-      ElMessage.info('查看全部练习记录')
+      router.push('/practice/history')
     }
 
     const getModeText = (mode) => {

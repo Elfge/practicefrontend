@@ -48,6 +48,11 @@ const routes = [
         component: () => import('@/views/PracticeMode.vue')
       },
       {
+        path: 'practice/history',
+        name: 'PracticeHistory',
+        component: () => import('@/views/PracticeHistory.vue')
+      },
+      {
         path: 'mistakes',
         name: 'Mistakes',
         component: () => import('@/views/Mistakes.vue')
@@ -81,6 +86,11 @@ const routes = [
         path: 'exam',
         name: 'Exam',
         component: () => import('@/views/Exam.vue')
+      },
+      {
+        path: 'exam/history',
+        name: 'ExamHistory',
+        component: () => import('@/views/ExamHistory.vue')
       },
       {
         path: 'exam/result/:id',

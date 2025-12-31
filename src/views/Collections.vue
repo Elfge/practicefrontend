@@ -363,7 +363,8 @@ import {
   getCollectionList,
   getCollectionFolders,
   createCollectionFolder,
-  moveQuestionToFolder
+  moveQuestionToFolder,
+  exportCollections as exportCollectionsApi
 } from '@/api/collection'
 
 export default {
@@ -636,8 +637,35 @@ export default {
       }
     }
 
-    const exportCollections = () => {
-      ElMessage.info('导出功能开发中...')
+    const exportCollections = async () => {
+      try {
+        ElMessage.info('正在准备导出，请稍候...')
+
+        const params = {}
+        if (activeFolder.value !== 'all') {
+          params.folder = activeFolder.value
+        }
+        if (filters.subject) params.subject = filters.subject
+        if (filters.type) params.type = filters.type
+
+        const res = await exportCollectionsApi(params)
+
+        // 创建下载链接
+        const blob = new Blob([res], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `收藏题目_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`
+        link.click()
+        window.URL.revokeObjectURL(url)
+
+        ElMessage.success('导出成功')
+      } catch (error) {
+        console.error('导出失败', error)
+        ElMessage.error('导出失败，请稍后重试')
+      }
     }
 
     const formatDate = (dateStr) => {
