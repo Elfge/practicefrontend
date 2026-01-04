@@ -2,7 +2,7 @@
   <el-container class="layout-container">
     <el-header class="top-header">
       <div class="logo">
-        <h3>408题库系统</h3>
+        <h3>考研408刷题系统</h3>
       </div>
       <el-menu
         :default-active="activeMenu"

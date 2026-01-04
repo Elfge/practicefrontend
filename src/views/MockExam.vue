@@ -54,17 +54,27 @@
           </template>
 
           <el-form :model="customSettings" label-width="120px" style="max-width: 600px; margin: 0 auto;">
-            <el-form-item label="科目选择">
+            <el-form-item label="组卷格式">
+              <el-radio-group v-model="customSettings.use408Format">
+                <el-radio :label="true">408标准格式（40选择+7综合）</el-radio>
+                <el-radio :label="false">自定义格式</el-radio>
+              </el-radio-group>
+              <div v-if="customSettings.use408Format" style="margin-top: 10px; color: #909399; font-size: 12px;">
+                💡 使用408标准格式将自动组成47道题（40道选择题+7道综合题），180分钟，忽略下方自定义设置
+              </div>
+            </el-form-item>
+
+            <el-form-item label="科目选择" v-if="!customSettings.use408Format">
               <el-select v-model="customSettings.subject" placeholder="选择科目" clearable>
                 <el-option label="全部科目" value="" />
-                <el-option label="数据结构" value="数据结构" />
-                <el-option label="计算机组成原理" value="计算机组成原理" />
-                <el-option label="操作系统" value="操作系统" />
-                <el-option label="计算机网络" value="计算机网络" />
+                <el-option label="数据结构" value="DS" />
+                <el-option label="计算机组成原理" value="CO" />
+                <el-option label="操作系统" value="OS" />
+                <el-option label="计算机网络" value="CN" />
               </el-select>
             </el-form-item>
 
-            <el-form-item label="难度选择">
+            <el-form-item label="难度选择" v-if="!customSettings.use408Format">
               <el-select v-model="customSettings.difficulty" placeholder="选择难度" clearable>
                 <el-option label="全部难度" value="" />
                 <el-option label="基础" value="easy" />
@@ -73,19 +83,20 @@
               </el-select>
             </el-form-item>
 
-            <el-form-item label="题目数量">
+            <el-form-item label="题目数量" v-if="!customSettings.use408Format">
               <el-input-number v-model="customSettings.count" :min="10" :max="100" :step="5" />
             </el-form-item>
 
-            <el-form-item label="考试时长">
+            <el-form-item label="考试时长" v-if="!customSettings.use408Format">
               <el-input-number v-model="customSettings.duration" :min="30" :max="240" :step="15" />
               <span style="margin-left: 10px;">分钟</span>
             </el-form-item>
 
-            <el-form-item label="题型选择">
+            <el-form-item label="题型选择" v-if="!customSettings.use408Format">
               <el-checkbox-group v-model="customSettings.types">
                 <el-checkbox value="SINGLE">单选题</el-checkbox>
                 <el-checkbox value="MULTIPLE">多选题</el-checkbox>
+                <el-checkbox value="COMPREHENSIVE">综合题</el-checkbox>
               </el-checkbox-group>
             </el-form-item>
 
@@ -208,6 +219,7 @@ export default {
 
     // 自定义模拟
     const customSettings = ref({
+      use408Format: false,
       subject: '',
       difficulty: '',
       count: 40,
@@ -220,6 +232,7 @@ export default {
       creatingExam.value = true
       try {
         const res = await createCustomExam({
+          use408Format: customSettings.value.use408Format,
           subject: customSettings.value.subject,
           difficulty: customSettings.value.difficulty,
           count: customSettings.value.count,
