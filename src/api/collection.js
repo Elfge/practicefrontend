@@ -92,3 +92,13 @@ export const getCollectionStats = () => {
     method: 'get'
   })
 }
+
+// 导出收藏题目
+export const exportCollections = (params) => {
+  return request({
+    url: '/api/collection/export',
+    method: 'get',
+    params,
+    responseType: 'blob'
+  })
+}

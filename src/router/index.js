@@ -38,6 +38,12 @@ const routes = [
         meta: { requiresAdmin: true }
       },
       {
+        path: 'user-management',
+        name: 'UserManagement',
+        component: () => import('@/views/UserManagement.vue'),
+        meta: { requiresAdmin: true }
+      },
+      {
         path: 'practice',
         name: 'Practice',
         component: () => import('@/views/Practice.vue')
@@ -46,6 +52,11 @@ const routes = [
         path: 'practice/:mode',
         name: 'PracticeMode',
         component: () => import('@/views/PracticeMode.vue')
+      },
+      {
+        path: 'practice/history',
+        name: 'PracticeHistory',
+        component: () => import('@/views/PracticeHistory.vue')
       },
       {
         path: 'mistakes',
@@ -81,6 +92,11 @@ const routes = [
         path: 'exam',
         name: 'Exam',
         component: () => import('@/views/Exam.vue')
+      },
+      {
+        path: 'exam/history',
+        name: 'ExamHistory',
+        component: () => import('@/views/ExamHistory.vue')
       },
       {
         path: 'exam/result/:id',

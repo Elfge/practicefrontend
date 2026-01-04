@@ -521,7 +521,7 @@ export default {
     }
 
     const viewAllHistory = () => {
-      ElMessage.info('查看全部考试记录')
+      router.push('/exam/history')
     }
 
     const formatDate = (dateStr) => {

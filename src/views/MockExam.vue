@@ -169,7 +169,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getExamPapers, startExam as startExamApi, createCustomExam, getExamRecords } from '@/api/practice'
 
 export default {
@@ -222,13 +222,29 @@ export default {
       use408Format: false,
       subject: '',
       difficulty: '',
-      count: 40,
       duration: 120,
-      types: ['SINGLE', 'MULTIPLE']
+      typeCounts: {
+        SINGLE: 20,
+        MULTIPLE: 15,
+        BLANK: 0,
+        COMPREHENSIVE: 0
+      }
     })
     const creatingExam = ref(false)
 
+    // 计算总题数
+    const totalCount = computed(() => {
+      const tc = customSettings.value.typeCounts
+      return (tc.SINGLE || 0) + (tc.MULTIPLE || 0) + (tc.BLANK || 0) + (tc.COMPREHENSIVE || 0)
+    })
+
     const startCustomExam = async () => {
+      // 验证至少选择一种题型
+      if (totalCount.value === 0) {
+        ElMessage.warning('请至少选择一种题型')
+        return
+      }
+
       creatingExam.value = true
       try {
         const res = await createCustomExam({
@@ -237,13 +253,35 @@ export default {
           difficulty: customSettings.value.difficulty,
           count: customSettings.value.count,
           duration: customSettings.value.duration,
-          types: customSettings.value.types
-        })
+          typeCounts: customSettings.value.typeCounts
+        }
+
+        // 只有非空时才添加科目和难度
+        if (customSettings.value.subject) {
+          requestData.subject = customSettings.value.subject
+        }
+        if (customSettings.value.difficulty) {
+          requestData.difficulty = customSettings.value.difficulty
+        }
+
+        const res = await createCustomExam(requestData)
         if (res.data && res.data.sessionId) {
           router.push(`/practice/batch?session=${res.data.sessionId}`)
         }
       } catch (error) {
-        ElMessage.error('创建模拟考试失败: ' + (error.message || '请重试'))
+        console.error('创建模拟考试失败:', error)
+        const errorMsg = error.response?.data?.message || error.message || '创建失败'
+
+        // 使用 MessageBox 显示详细错误信息
+        ElMessageBox.alert(
+          errorMsg.replace(/\\n/g, '<br/>'),
+          '创建模拟考试失败',
+          {
+            confirmButtonText: '我知道了',
+            dangerouslyUseHTMLString: true,
+            type: 'warning'
+          }
+        )
       } finally {
         creatingExam.value = false
       }
@@ -310,6 +348,7 @@ export default {
       customSettings,
       creatingExam,
       startCustomExam,
+      totalCount,
       examRecords,
       loadingRecords,
       viewRecord,
